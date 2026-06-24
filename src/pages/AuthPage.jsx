@@ -9,6 +9,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('error')
   const [form, setForm] = useState({
     fullName: '',
     email: '',
@@ -24,6 +25,21 @@ export default function AuthPage() {
         if (data?.length) setForm((current) => ({ ...current, nodeId: data[0].node_id }))
       })
   }, [])
+
+  function friendlyAuthError(message) {
+    const msg = message?.toLowerCase() ?? ''
+    if (msg.includes('rate limit') || msg.includes('too many requests'))
+      return 'Too many attempts. Please wait a few minutes before trying again.'
+    if (msg.includes('invalid login credentials') || msg.includes('invalid email or password'))
+      return 'Incorrect email or password.'
+    if (msg.includes('user already registered') || msg.includes('already been registered'))
+      return 'An account with this email already exists. Sign in instead.'
+    if (msg.includes('email not confirmed'))
+      return 'Please confirm your email address before signing in.'
+    if (msg.includes('password should be'))
+      return 'Password must be at least 6 characters.'
+    return message
+  }
 
   function update(event) {
     setForm({ ...form, [event.target.name]: event.target.value })
@@ -52,9 +68,11 @@ export default function AuthPage() {
         })
 
     if (result.error) {
-      setMessage(result.error.message)
+      setMessage(friendlyAuthError(result.error.message))
+      setMessageType('error')
     } else if (mode === 'signup' && !result.data.session) {
-      setMessage('Account created. Check your email to confirm the account, then sign in.')
+      setMessage('Account created. Check your email to confirm it, then sign in.')
+      setMessageType('success')
     }
     setLoading(false)
   }
@@ -84,8 +102,8 @@ export default function AuthPage() {
           <p>{mode === 'login' ? 'Monitor the air around you in real time.' : 'Set up local air monitoring in a minute.'}</p>
 
           <div className="auth-tabs">
-            <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setMessage('') }}>Sign in</button>
-            <button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setMessage('') }}>Sign up</button>
+            <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setMessage(''); setMessageType('error') }}>Sign in</button>
+            <button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setMessage(''); setMessageType('error') }}>Sign up</button>
           </div>
 
           {mode === 'signup' && (
@@ -133,7 +151,7 @@ export default function AuthPage() {
             </span>
           </label>
 
-          {message && <p className="form-message">{message}</p>}
+          {message && <p className={messageType === 'success' ? 'success-message' : 'form-message'}>{message}</p>}
           <button className="primary-button" disabled={loading}>
             {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
             {!loading && <ArrowRight size={18} />}
