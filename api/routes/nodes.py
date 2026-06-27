@@ -5,7 +5,7 @@ from auth import get_current_user
 router = APIRouter()
 
 @router.get('/')
-def get_nodes(current_user=Depends(get_current_user)):
+def get_nodes():
     return query('SELECT * FROM nodes ORDER BY node_id')
 
 @router.get('/latest')
