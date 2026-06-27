@@ -81,7 +81,7 @@ export default function AuthPage({ onLogin }) {
                   {nodes.map(n => <option key={n.node_id} value={n.node_id}>{n.location}, {n.district}</option>)}
                 </select>
               </label>
-              <label>Phone number <small>Optional</small><input name="phone" value={form.phone} onChange={update} placeholder="+91 98765 43210" /></label>
+              <label>Phone number <small>Optional</small><input name="phone" value={form.phone} onChange={update} placeholder="Enter your phone number" /></label>
             </>
           )}
 
