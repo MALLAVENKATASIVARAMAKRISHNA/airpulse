@@ -6,7 +6,7 @@ app = FastAPI(title='AirPulse API', version='1.0.0')
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost:5173', 'http://localhost:4173', 'https://4z.onrender.com'],
+    allow_origins=['http://localhost:5173', 'http://localhost:4173', 'https://4z.onrender.com', 'https://03f93003.xyz'],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
