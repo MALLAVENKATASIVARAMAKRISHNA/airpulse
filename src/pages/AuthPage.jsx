@@ -1,71 +1,44 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, Eye, EyeOff, MapPin, ShieldCheck, Wind } from 'lucide-react'
 import Logo from '../components/Logo'
-import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 
-export default function AuthPage() {
-  const [mode, setMode] = useState('login')
-  const [nodes, setNodes] = useState([])
+export default function AuthPage({ onLogin }) {
+  const [mode, setMode]               = useState('login')
+  const [nodes, setNodes]             = useState([])
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [form, setForm] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    nodeId: '',
-    phone: '',
-  })
+  const [loading, setLoading]         = useState(false)
+  const [message, setMessage]         = useState('')
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', nodeId: '', phone: '' })
 
   useEffect(() => {
-    supabase.from('nodes').select('node_id, location, district').order('location')
-      .then(({ data }) => {
-        setNodes(data || [])
-        if (data?.length) setForm((current) => ({ ...current, nodeId: data[0].node_id }))
-      })
+    api.nodes().then(data => {
+      setNodes(data || [])
+      if (data?.length) setForm(f => ({ ...f, nodeId: data[0].node_id }))
+    }).catch(() => {})
   }, [])
 
-  function friendlyAuthError(message) {
-    const msg = message?.toLowerCase() ?? ''
-    if (msg.includes('rate limit') || msg.includes('too many requests'))
-      return 'Too many attempts. Please wait a few minutes before trying again.'
-    if (msg.includes('invalid login credentials') || msg.includes('invalid email or password'))
-      return 'Incorrect email or password.'
-    if (msg.includes('user already registered') || msg.includes('already been registered'))
-      return 'An account with this email already exists. Sign in instead.'
-    if (msg.includes('password should be'))
-      return 'Password must be at least 6 characters.'
-    return message
+  function friendlyError(msg) {
+    const m = msg?.toLowerCase() ?? ''
+    if (m.includes('already exists'))  return 'An account with this email already exists. Sign in instead.'
+    if (m.includes('incorrect email'))  return 'Incorrect email or password.'
+    if (m.includes('not authenticated')) return 'Session expired. Please sign in again.'
+    return msg
   }
 
-  function update(event) {
-    setForm({ ...form, [event.target.name]: event.target.value })
-  }
+  function update(e) { setForm({ ...form, [e.target.name]: e.target.value }) }
 
-  async function submit(event) {
-    event.preventDefault()
+  async function submit(e) {
+    e.preventDefault()
     setLoading(true)
     setMessage('')
-
-    const result = mode === 'login'
-      ? await supabase.auth.signInWithPassword({
-          email: form.email,
-          password: form.password,
-        })
-      : await supabase.auth.signUp({
-          email: form.email,
-          password: form.password,
-          options: {
-            data: {
-              full_name: form.fullName,
-              node_id: form.nodeId,
-              phone_number: form.phone,
-            },
-          },
-        })
-
-    if (result.error) {
-      setMessage(friendlyAuthError(result.error.message))
+    try {
+      const res = mode === 'login'
+        ? await api.login(form.email, form.password)
+        : await api.signup({ full_name: form.fullName, email: form.email, password: form.password, node_id: form.nodeId, phone_number: form.phone })
+      onLogin(res.token, res.user)
+    } catch (err) {
+      setMessage(friendlyError(err.message))
     }
     setLoading(false)
   }
@@ -101,44 +74,23 @@ export default function AuthPage() {
 
           {mode === 'signup' && (
             <>
-              <label>
-                Full name
-                <input name="fullName" value={form.fullName} onChange={update} placeholder="Your full name" required />
-              </label>
+              <label>Full name<input name="fullName" value={form.fullName} onChange={update} placeholder="Your full name" required /></label>
               <label>
                 Monitoring location
                 <select name="nodeId" value={form.nodeId} onChange={update} required>
-                  {nodes.map((node) => (
-                    <option key={node.node_id} value={node.node_id}>
-                      {node.location}, {node.district}
-                    </option>
-                  ))}
+                  {nodes.map(n => <option key={n.node_id} value={n.node_id}>{n.location}, {n.district}</option>)}
                 </select>
               </label>
-              <label>
-                Phone number <small>Optional</small>
-                <input name="phone" value={form.phone} onChange={update} placeholder="+91 98765 43210" />
-              </label>
+              <label>Phone number <small>Optional</small><input name="phone" value={form.phone} onChange={update} placeholder="+91 98765 43210" /></label>
             </>
           )}
 
-          <label>
-            Email address
-            <input name="email" type="email" value={form.email} onChange={update} placeholder="you@example.com" required />
-          </label>
+          <label>Email address<input name="email" type="email" value={form.email} onChange={update} placeholder="you@example.com" required /></label>
           <label>
             Password
             <span className="password-field">
-              <input
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={update}
-                placeholder="Minimum 6 characters"
-                minLength="6"
-                required
-              />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label="Show password">
+              <input name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={update} placeholder="Minimum 6 characters" minLength="6" required />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label="Toggle password">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </span>

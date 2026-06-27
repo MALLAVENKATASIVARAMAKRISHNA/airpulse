@@ -1,40 +1,41 @@
-import {
-  Bell,
-  Gauge,
-  LogOut,
-  MapPinned,
-  Settings2,
-  Users,
-} from 'lucide-react'
+import { Activity, Gauge, LogOut, MapPinned, Play, Users, Wind } from 'lucide-react'
 import Logo from './Logo'
 
-export default function AppShell({ role, title, subtitle, onSignOut, children }) {
+const ADMIN_NAV = [
+  { id: 'overview',    icon: Gauge,     label: 'Overview'    },
+  { id: 'nodes',       icon: MapPinned, label: 'Nodes'       },
+  { id: 'users',       icon: Users,     label: 'Users'       },
+  { id: 'simulation',  icon: Play,      label: 'Simulation'  },
+]
+
+const USER_NAV = [
+  { id: 'overview', icon: Gauge,    label: 'Dashboard' },
+  { id: 'air',      icon: Wind,     label: 'Air quality' },
+  { id: 'activity', icon: Activity, label: 'Activity'   },
+]
+
+export default function AppShell({ role, title, subtitle, onSignOut, activeTab, onTabChange, children }) {
   const admin = role === 'admin'
+  const nav   = admin ? ADMIN_NAV : USER_NAV
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <Logo />
         <nav>
-          <button className="nav-item active">
-            <Gauge size={19} /> Overview
-          </button>
-          <button className="nav-item">
-            <MapPinned size={19} /> {admin ? 'Monitoring nodes' : 'My location'}
-          </button>
-          <button className="nav-item">
-            {admin ? <Users size={19} /> : <Bell size={19} />}
-            {admin ? 'Users' : 'Alerts'}
-          </button>
-          <button className="nav-item">
-            <Settings2 size={19} /> Settings
-          </button>
+          {nav.map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              className={`nav-item ${activeTab === id ? 'active' : ''}`}
+              onClick={() => onTabChange?.(id)}
+            >
+              <Icon size={19} /> {label}
+            </button>
+          ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="live-chip"><span /> System live</div>
-          <button className="nav-item" onClick={onSignOut}>
-            <LogOut size={19} /> Sign out
-          </button>
+          <button className="nav-item" onClick={onSignOut}><LogOut size={19} /> Sign out</button>
         </div>
       </aside>
 

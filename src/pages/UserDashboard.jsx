@@ -19,66 +19,43 @@ import {
   getHealthMessage,
   pollutantConfig,
 } from '../lib/airQuality'
-import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 
 export default function UserDashboard({ profile, health, onSignOut }) {
-  const [node, setNode] = useState(null)
+  const [node, setNode]         = useState(null)
   const [readings, setReadings] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]   = useState(true)
   const [dismissedReading, setDismissedReading] = useState(
     () => localStorage.getItem(`airpulse-dismissed-${profile.user_id}`),
   )
 
   const loadData = useCallback(async () => {
-    const [nodeResult, readingResult] = await Promise.all([
-      supabase.from('nodes').select('*').eq('node_id', profile.node_id).single(),
-      supabase
-        .from('aqi_readings')
-        .select('*')
-        .eq('node_id', profile.node_id)
-        .order('reading_id', { ascending: false })
-        .limit(24),
+    const [nodeList, readingList] = await Promise.all([
+      api.nodes().catch(() => []),
+      api.nodeReadings(profile.node_id).catch(() => []),
     ])
-    setNode(nodeResult.data)
-    setReadings(readingResult.data || [])
+    setNode((nodeList || []).find(n => n.node_id === profile.node_id) || null)
+    setReadings(readingList || [])
     setLoading(false)
   }, [profile.node_id])
 
   useEffect(() => {
     loadData()
-    const channel = supabase
-      .channel(`node-readings-${profile.node_id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'aqi_readings',
-          filter: `node_id=eq.${profile.node_id}`,
-        },
-        (payload) => setReadings((current) => [payload.new, ...current].slice(0, 24)),
-      )
-      .subscribe()
-
-    // Realtime delivery can be interrupted by browser sleep or a temporary
-    // connection loss. Polling and focus refresh keep safety alerts reliable.
     const poll = window.setInterval(loadData, 5000)
     const refreshOnFocus = () => loadData()
     window.addEventListener('focus', refreshOnFocus)
     document.addEventListener('visibilitychange', refreshOnFocus)
-
     return () => {
       window.clearInterval(poll)
       window.removeEventListener('focus', refreshOnFocus)
       document.removeEventListener('visibilitychange', refreshOnFocus)
-      supabase.removeChannel(channel)
     }
-  }, [loadData, profile.node_id])
+  }, [loadData])
 
-  const current = readings[0]
+  const current   = readings[0]
   const chartData = useMemo(
-    () => [...readings].reverse().map((item) => ({
-      aqi: item.aqi,
+    () => [...readings].reverse().map(item => ({
+      aqi:  item.aqi,
       time: new Date(item.recorded_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
     })),
     [readings],
@@ -119,7 +96,7 @@ export default function UserDashboard({ profile, health, onSignOut }) {
           <h2>{health?.condition_name === 'Asthma' ? 'Asthma-aware guidance' : 'Today’s guidance'}</h2>
           <p>{getHealthMessage(current?.aqi || 0, health?.condition_name, health?.severity_level)}</p>
           <div className="profile-chip">
-            {health?.condition_name || 'Normal'} {health?.severity_level !== 'None' && `• ${health?.severity_level}`}
+            {health?.condition_name || 'Normal'} {health?.severity_level !== 'None' && `· ${health?.severity_level}`}
           </div>
         </div>
       </section>

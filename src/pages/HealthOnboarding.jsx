@@ -1,33 +1,27 @@
 import { useState } from 'react'
 import { Activity, ArrowRight, HeartPulse } from 'lucide-react'
 import Logo from '../components/Logo'
-import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 
 export default function HealthOnboarding({ profile, conditions, onComplete }) {
-  const normalId = conditions.find((item) => item.condition_name === 'Normal')?.condition_id
-  const [form, setForm] = useState({
-    conditionId: normalId || '',
-    severity: 'None',
-    age: '',
-    gender: '',
-  })
+  const normalId = conditions.find(c => c.condition_name === 'Normal')?.condition_id
+  const [form, setForm] = useState({ conditionId: normalId || '', severity: 'None', age: '', gender: '' })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const selected = conditions.find((item) => String(item.condition_id) === String(form.conditionId))
+  const [error, setError]     = useState('')
+  const selected = conditions.find(c => String(c.condition_id) === String(form.conditionId))
 
-  async function submit(event) {
-    event.preventDefault()
-    setLoading(true)
-    setError('')
-    const { error: saveError } = await supabase.from('user_health').insert({
-      user_id: profile.user_id,
-      condition_id: Number(form.conditionId),
-      severity_level: selected?.condition_name === 'Normal' ? 'None' : form.severity,
-      age: Number(form.age),
-      gender: form.gender,
-    })
-    if (saveError) setError(saveError.message)
-    else onComplete()
+  async function submit(e) {
+    e.preventDefault()
+    setLoading(true); setError('')
+    try {
+      await api.saveHealth({
+        condition_id:   Number(form.conditionId),
+        severity_level: selected?.condition_name === 'Normal' ? 'None' : form.severity,
+        age:            Number(form.age),
+        gender:         form.gender,
+      })
+      onComplete()
+    } catch (err) { setError(err.message) }
     setLoading(false)
   }
 
@@ -42,17 +36,15 @@ export default function HealthOnboarding({ profile, conditions, onComplete }) {
         <form onSubmit={submit}>
           <label>
             Health condition
-            <select value={form.conditionId} onChange={(e) => setForm({ ...form, conditionId: e.target.value })} required>
+            <select value={form.conditionId} onChange={e => setForm({ ...form, conditionId: e.target.value })} required>
               <option value="" disabled>Select a condition</option>
-              {conditions.map((condition) => (
-                <option value={condition.condition_id} key={condition.condition_id}>{condition.condition_name}</option>
-              ))}
+              {conditions.map(c => <option key={c.condition_id} value={c.condition_id}>{c.condition_name}</option>)}
             </select>
           </label>
           {selected?.condition_name !== 'Normal' && (
             <label>
               Severity
-              <select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })} required>
+              <select value={form.severity} onChange={e => setForm({ ...form, severity: e.target.value })} required>
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
                 <option value="High">High</option>
@@ -60,13 +52,10 @@ export default function HealthOnboarding({ profile, conditions, onComplete }) {
             </label>
           )}
           <div className="two-fields">
-            <label>
-              Age
-              <input type="number" min="1" max="120" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} required />
-            </label>
+            <label>Age<input type="number" min="1" max="120" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} required /></label>
             <label>
               Gender
-              <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} required>
+              <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })} required>
                 <option value="" disabled>Select</option>
                 <option>Female</option>
                 <option>Male</option>
