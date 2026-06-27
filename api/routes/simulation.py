@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from database import query
 from auth import admin_only
+from notifications import check_and_notify
 
 router = APIRouter()
 
@@ -94,6 +95,8 @@ def generate_and_insert(node_id, base):
         'dominant': dominant,
     }
     sim.log = ([entry] + sim.log)[:20]
+
+    check_and_notify(node_id, aqi, base['name'])
 
 def simulation_loop():
     while sim.running:

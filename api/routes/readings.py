@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from database import query
 from auth import admin_only
+from notifications import check_and_notify
 
 router = APIRouter()
 
@@ -41,4 +42,5 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
         data.sub_aqi_pm25, data.sub_aqi_pm10, data.sub_aqi_co, data.sub_aqi_nh3,
         data.sub_aqi_no2, data.sub_aqi_ozone, data.dominant_pollutant, data.cause
     ), fetch='one')
+    check_and_notify(data.node_id, data.aqi, data.node_id)
     return dict(row)

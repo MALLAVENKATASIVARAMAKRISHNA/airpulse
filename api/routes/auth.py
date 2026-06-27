@@ -99,6 +99,12 @@ def save_health(data: dict, current_user=Depends(get_current_user)):
     """, (current_user['user_id'], data['condition_id'], data['severity_level'], data['age'], data['gender']), fetch='none')
     return {'ok': True}
 
+@router.post('/push-token')
+def save_push_token(data: dict, current_user=Depends(get_current_user)):
+    query('UPDATE users SET push_token = %s WHERE user_id = %s',
+          (data.get('token'), current_user['user_id']), fetch='none')
+    return {'ok': True}
+
 @router.get('/health')
 def get_health(current_user=Depends(get_current_user)):
     row = query("""
