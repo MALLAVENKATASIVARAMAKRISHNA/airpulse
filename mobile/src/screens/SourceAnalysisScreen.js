@@ -22,12 +22,12 @@ const CAUSE_ICONS = {
 }
 
 const WHO_LIMITS = {
-  pm25:  { label: 'PM2.5', unit: 'µg/m³', limit: 15,   annual: true  },
-  pm10:  { label: 'PM10',  unit: 'µg/m³', limit: 45,   annual: false },
-  no2:   { label: 'NO2',   unit: 'µg/m³', limit: 25,   annual: false },
-  co:    { label: 'CO',    unit: 'mg/m³',  limit: 4,    annual: false },
-  ozone: { label: 'Ozone', unit: 'µg/m³', limit: 100,  annual: false },
-  nh3:   { label: 'NH3',   unit: 'µg/m³', limit: 400,  annual: false },
+  pm25:  { label: 'PM2.5', unit: 'µg/m³', limit: 15  },
+  pm10:  { label: 'PM10',  unit: 'µg/m³', limit: 45  },
+  no2:   { label: 'NO2',   unit: 'µg/m³', limit: 25  },
+  co:    { label: 'CO',    unit: 'mg/m³',  limit: 4   },
+  ozone: { label: 'Ozone', unit: 'µg/m³', limit: 100 },
+  nh3:   { label: 'NH3',   unit: 'µg/m³', limit: 400 },
 }
 
 function getCauseStyle(cause) {
@@ -69,7 +69,7 @@ export default function SourceAnalysisScreen() {
   }
 
   if (loading && !reading) return (
-    <View style={styles.center}><ActivityIndicator size="large" color="#00897B" /></View>
+    <View style={styles.center}><ActivityIndicator size="large" color="#006aff" /></View>
   )
 
   const aqi        = reading?.aqi ?? 0
@@ -81,7 +81,7 @@ export default function SourceAnalysisScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#00897B']} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#006aff']} />}
     >
       {/* Current cause card */}
       <View style={[styles.causeCard, { borderLeftColor: causeStyle.color }]}>
@@ -169,7 +169,7 @@ export default function SourceAnalysisScreen() {
                   <Text style={styles.historyTime}>{formatTime(r.recorded_at)}</Text>
                   <Text style={styles.historyCause} numberOfLines={2}>{r.cause || 'No cause recorded'}</Text>
                 </View>
-                <View style={[styles.historyAqi, { backgroundColor: rm.bg }]}>
+                <View style={[styles.historyAqi, { backgroundColor: rm.color + '28' }]}>
                   <Text style={[styles.historyAqiVal, { color: rm.color }]}>{r.aqi}</Text>
                 </View>
               </View>
@@ -182,40 +182,40 @@ export default function SourceAnalysisScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#F5F5F5' },
+  container:    { flex: 1, backgroundColor: '#060913' },
   content:      { padding: 16, paddingBottom: 32 },
-  center:       { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  causeCard:    { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, flexDirection: 'row', alignItems: 'flex-start', gap: 14, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  center:       { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#060913' },
+  causeCard:    { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, flexDirection: 'row', alignItems: 'flex-start', gap: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   causeEmoji:   { fontSize: 36, width: 44, textAlign: 'center' },
   causeBody:    { flex: 1 },
-  causeLabel:   { fontSize: 11, fontWeight: '600', color: '#9E9E9E', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  causeDominant:{ fontSize: 16, fontWeight: '800', color: '#212121', marginBottom: 4 },
-  causeText:    { fontSize: 14, color: '#424242', lineHeight: 20 },
-  section:      { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#212121', marginBottom: 2 },
-  sectionSub:   { fontSize: 12, color: '#9E9E9E', marginBottom: 14 },
+  causeLabel:   { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  causeDominant:{ fontSize: 16, fontWeight: '800', color: '#ffffff', marginBottom: 4 },
+  causeText:    { fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 20 },
+  section:      { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#ffffff', marginBottom: 2 },
+  sectionSub:   { fontSize: 12, color: 'rgba(255,255,255,0.40)', marginBottom: 14 },
   pollRow:      { marginBottom: 14 },
   pollMeta:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  pollLabel:    { fontSize: 13, fontWeight: '600', color: '#424242' },
+  pollLabel:    { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.70)' },
   pollValueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   pollVal:      { fontSize: 14, fontWeight: '800' },
-  pollUnit:     { fontSize: 11, color: '#9E9E9E' },
-  overBadge:    { backgroundColor: '#FFEBEE', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 },
-  overText:     { fontSize: 10, color: '#C62828', fontWeight: '600' },
-  barTrack:     { height: 6, backgroundColor: '#F0F0F0', borderRadius: 3, overflow: 'hidden', position: 'relative', marginBottom: 2 },
+  pollUnit:     { fontSize: 11, color: 'rgba(255,255,255,0.40)' },
+  overBadge:    { backgroundColor: 'rgba(239,83,80,0.20)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 },
+  overText:     { fontSize: 10, color: '#FF5252', fontWeight: '600' },
+  barTrack:     { height: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 3, overflow: 'hidden', position: 'relative', marginBottom: 2 },
   barFill:      { height: 6, borderRadius: 3 },
-  barLimit:     { position: 'absolute', right: 0, width: 1.5, height: 6, backgroundColor: '#BDBDBD' },
-  limitText:    { fontSize: 10, color: '#9E9E9E' },
+  barLimit:     { position: 'absolute', right: 0, width: 1.5, height: 6, backgroundColor: 'rgba(255,255,255,0.30)' },
+  limitText:    { fontSize: 10, color: 'rgba(255,255,255,0.40)' },
   subRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  subLabel:     { width: 44, fontSize: 12, fontWeight: '600', color: '#616161' },
-  subTrack:     { flex: 1, height: 6, backgroundColor: '#F0F0F0', borderRadius: 3, overflow: 'hidden' },
+  subLabel:     { width: 44, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.55)' },
+  subTrack:     { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 3, overflow: 'hidden' },
   subFill:      { height: 6, borderRadius: 3 },
   subVal:       { width: 36, fontSize: 13, fontWeight: '800', textAlign: 'right' },
-  historyRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
+  historyRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
   historyIcon:  { fontSize: 22, width: 30, textAlign: 'center' },
   historyBody:  { flex: 1 },
-  historyTime:  { fontSize: 11, color: '#9E9E9E', marginBottom: 2 },
-  historyCause: { fontSize: 13, color: '#424242', lineHeight: 18 },
+  historyTime:  { fontSize: 11, color: 'rgba(255,255,255,0.40)', marginBottom: 2 },
+  historyCause: { fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 18 },
   historyAqi:   { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', minWidth: 44 },
   historyAqiVal:{ fontSize: 15, fontWeight: '900' },
 })

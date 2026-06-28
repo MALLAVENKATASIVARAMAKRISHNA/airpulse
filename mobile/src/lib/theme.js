@@ -1,0 +1,15 @@
+export const T = {
+  bg:          '#060913',
+  card:        'rgba(255,255,255,0.06)',
+  border:      'rgba(255,255,255,0.10)',
+  nav:         '#0c1120',
+  blue:        '#006aff',
+  green:       '#10d343',
+  text:        '#ffffff',
+  muted:       'rgba(255,255,255,0.45)',
+  dim:         'rgba(255,255,255,0.28)',
+  track:       'rgba(255,255,255,0.10)',
+  inputBg:     'rgba(255,255,255,0.07)',
+  inputBorder: 'rgba(255,255,255,0.16)',
+  divider:     'rgba(255,255,255,0.08)',
+}

@@ -1,5 +1,6 @@
 import React from 'react'
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native'
+import Svg, { Defs, LinearGradient, Stop, Circle, Path } from 'react-native-svg'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator }   from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
@@ -15,6 +16,33 @@ import ProfileScreen        from '../screens/ProfileScreen'
 const Stack = createNativeStackNavigator()
 const Tab   = createBottomTabNavigator()
 
+function HeaderLogo() {
+  return (
+    <View style={styles.logoWrap}>
+      <Svg width={30} height={30} viewBox="0 0 100 100">
+        <Defs>
+          <LinearGradient id="hgrad" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor="#006aff" />
+            <Stop offset="1" stopColor="#10d343" />
+          </LinearGradient>
+        </Defs>
+        <Circle cx="50" cy="50" r="48" fill="url(#hgrad)" />
+        <Path
+          d="M 10 50 L 28 50 L 36 62 L 46 18 L 56 82 L 66 38 L 74 50 L 90 50"
+          stroke="white" strokeWidth="7" strokeLinecap="round"
+          strokeLinejoin="round" fill="none"
+        />
+      </Svg>
+      <View style={styles.logoTextWrap}>
+        <Text style={styles.logoName}>
+          air<Text style={styles.logoAccent}>pulse</Text>
+        </Text>
+        <Text style={styles.logoSub}>AI MONITOR</Text>
+      </View>
+    </View>
+  )
+}
+
 function ProfileButton({ navigation }) {
   return (
     <TouchableOpacity
@@ -22,22 +50,26 @@ function ProfileButton({ navigation }) {
       onPress={() => navigation.navigate('Profile')}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      <Ionicons name="person-circle" size={30} color="#00897B" />
+      <Ionicons name="person-circle" size={30} color="rgba(255,255,255,0.7)" />
     </TouchableOpacity>
   )
+}
+
+const HEADER_OPTS = {
+  headerStyle:         { backgroundColor: '#0c1120' },
+  headerTitleStyle:    { fontSize: 17, fontWeight: '700', color: '#ffffff' },
+  headerShadowVisible: false,
 }
 
 function Tabs() {
   return (
     <Tab.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle:          { backgroundColor: '#fff' },
-        headerTitleStyle:     { fontSize: 18, fontWeight: '800', color: '#212121' },
-        headerShadowVisible:  false,
+        ...HEADER_OPTS,
         headerRight: () => <ProfileButton navigation={navigation} />,
-        tabBarActiveTintColor:   '#00897B',
-        tabBarInactiveTintColor: '#9E9E9E',
-        tabBarStyle:             { borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 4, height: 58 },
+        tabBarActiveTintColor:   '#006aff',
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.35)',
+        tabBarStyle:             { backgroundColor: '#0c1120', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)', paddingBottom: 4, height: 58 },
         tabBarLabelStyle:        { fontSize: 11, fontWeight: '600', marginBottom: 2 },
       })}
     >
@@ -45,7 +77,7 @@ function Tabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'AirPulse',
+          headerTitle: () => <HeaderLogo />,
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
         }}
@@ -115,10 +147,8 @@ export default function AppNavigator({ onLogout }) {
         initialParams={{ onLogout }}
         options={{
           title: 'Profile',
-          headerStyle:          { backgroundColor: '#fff' },
-          headerTitleStyle:     { fontSize: 18, fontWeight: '800', color: '#212121' },
-          headerShadowVisible:  false,
-          headerTintColor:      '#00897B',
+          ...HEADER_OPTS,
+          headerTintColor: '#006aff',
         }}
       />
     </Stack.Navigator>
@@ -126,5 +156,10 @@ export default function AppNavigator({ onLogout }) {
 }
 
 const styles = StyleSheet.create({
-  profileBtn: { marginRight: 12 },
+  logoWrap:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoTextWrap: { justifyContent: 'center' },
+  logoName:     { fontSize: 17, fontWeight: '900', color: '#ffffff', letterSpacing: -0.3 },
+  logoAccent:   { color: '#006aff' },
+  logoSub:      { fontSize: 8, color: 'rgba(255,255,255,0.35)', letterSpacing: 1.5 },
+  profileBtn:   { marginRight: 12 },
 })

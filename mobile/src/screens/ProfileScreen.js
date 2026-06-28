@@ -101,8 +101,8 @@ export default function ProfileScreen({ route, navigation }) {
         </View>
         <Text style={styles.name}>{user?.full_name ?? '—'}</Text>
         <Text style={styles.email}>{user?.email ?? '—'}</Text>
-        <View style={[styles.roleBadge, { backgroundColor: user?.role === 'admin' ? '#E8F5E9' : '#E3F2FD' }]}>
-          <Text style={[styles.roleText, { color: user?.role === 'admin' ? '#2E7D32' : '#1565C0' }]}>
+        <View style={[styles.roleBadge, { backgroundColor: user?.role === 'admin' ? 'rgba(0,200,83,0.15)' : 'rgba(0,106,255,0.15)' }]}>
+          <Text style={[styles.roleText, { color: user?.role === 'admin' ? '#00C853' : '#006aff' }]}>
             {user?.role?.toUpperCase() ?? 'USER'}
           </Text>
         </View>
@@ -157,7 +157,7 @@ export default function ProfileScreen({ route, navigation }) {
         <TextInput
           style={styles.input}
           placeholder="Your age"
-          placeholderTextColor="#BDBDBD"
+          placeholderTextColor="rgba(255,255,255,0.3)"
           keyboardType="numeric"
           value={form.age}
           onChangeText={v => update('age', v)}
@@ -219,42 +219,42 @@ function InfoRow({ label, value }) {
 }
 
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: '#F5F5F5' },
+  container:        { flex: 1, backgroundColor: '#060913' },
   content:          { padding: 16, paddingBottom: 40 },
-  section:          { alignItems: 'center', backgroundColor: '#fff', borderRadius: 20, padding: 24, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  avatar:           { width: 72, height: 72, borderRadius: 36, backgroundColor: '#00897B', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  section:          { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: 24, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  avatar:           { width: 72, height: 72, borderRadius: 36, backgroundColor: '#006aff', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   avatarText:       { fontSize: 32, fontWeight: '700', color: '#fff' },
-  name:             { fontSize: 20, fontWeight: '800', color: '#212121', marginBottom: 4 },
-  email:            { fontSize: 14, color: '#757575', marginBottom: 10 },
+  name:             { fontSize: 20, fontWeight: '800', color: '#ffffff', marginBottom: 4 },
+  email:            { fontSize: 14, color: 'rgba(255,255,255,0.45)', marginBottom: 10 },
   roleBadge:        { paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20 },
   roleText:         { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
-  card:             { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  cardTitle:        { fontSize: 16, fontWeight: '700', color: '#212121', marginBottom: 14 },
-  infoRow:          { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
-  infoLabel:        { fontSize: 13, color: '#9E9E9E' },
-  infoValue:        { fontSize: 13, fontWeight: '600', color: '#212121', flexShrink: 1, textAlign: 'right', marginLeft: 12 },
-  thresholdCard:    { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  thresholdTitle:   { fontSize: 16, fontWeight: '700', color: '#212121', marginBottom: 2 },
-  thresholdSub:     { fontSize: 12, color: '#9E9E9E', marginBottom: 14 },
+  card:             { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  cardTitle:        { fontSize: 16, fontWeight: '700', color: '#ffffff', marginBottom: 14 },
+  infoRow:          { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
+  infoLabel:        { fontSize: 13, color: 'rgba(255,255,255,0.45)' },
+  infoValue:        { fontSize: 13, fontWeight: '600', color: '#ffffff', flexShrink: 1, textAlign: 'right', marginLeft: 12 },
+  thresholdCard:    { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  thresholdTitle:   { fontSize: 16, fontWeight: '700', color: '#ffffff', marginBottom: 2 },
+  thresholdSub:     { fontSize: 12, color: 'rgba(255,255,255,0.40)', marginBottom: 14 },
   thresholdRow:     { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  thresholdBox:     { flex: 1, borderWidth: 2, borderRadius: 14, padding: 14, alignItems: 'center' },
-  thresholdLabel:   { fontSize: 12, fontWeight: '600', color: '#616161', marginBottom: 6 },
+  thresholdBox:     { flex: 1, borderWidth: 2, borderRadius: 14, padding: 14, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' },
+  thresholdLabel:   { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.55)', marginBottom: 6 },
   thresholdVal:     { fontSize: 34, fontWeight: '900', marginBottom: 2 },
-  thresholdDesc:    { fontSize: 11, color: '#9E9E9E', textAlign: 'center' },
-  thresholdNote:    { fontSize: 12, color: '#757575', textAlign: 'center', backgroundColor: '#F5F5F5', borderRadius: 8, padding: 8 },
-  label:            { fontSize: 13, fontWeight: '600', color: '#757575', marginBottom: 6, marginTop: 12 },
-  select:           { borderWidth: 1.5, borderColor: '#E0E0E0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, backgroundColor: '#FAFAFA', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  selectText:       { fontSize: 15, color: '#212121' },
-  arrow:            { fontSize: 16, color: '#9E9E9E' },
-  input:            { borderWidth: 1.5, borderColor: '#E0E0E0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: '#212121', backgroundColor: '#FAFAFA' },
+  thresholdDesc:    { fontSize: 11, color: 'rgba(255,255,255,0.40)', textAlign: 'center' },
+  thresholdNote:    { fontSize: 12, color: 'rgba(255,255,255,0.45)', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 8 },
+  label:            { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginBottom: 6, marginTop: 12 },
+  select:           { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, backgroundColor: 'rgba(255,255,255,0.07)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  selectText:       { fontSize: 15, color: '#ffffff' },
+  arrow:            { fontSize: 16, color: 'rgba(255,255,255,0.4)' },
+  input:            { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.07)' },
   genderRow:        { flexDirection: 'row', gap: 8, marginTop: 0 },
-  genderBtn:        { flex: 1, paddingVertical: 11, borderRadius: 10, borderWidth: 1.5, borderColor: '#E0E0E0', alignItems: 'center', backgroundColor: '#FAFAFA' },
-  genderActive:     { borderColor: '#00897B', backgroundColor: '#E0F2F1' },
-  genderText:       { fontSize: 14, color: '#9E9E9E', fontWeight: '600' },
-  genderTextActive: { color: '#00695C' },
-  success:          { color: '#00897B', fontSize: 13, fontWeight: '600', marginTop: 12 },
-  saveBtn:          { backgroundColor: '#00897B', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
+  genderBtn:        { flex: 1, paddingVertical: 11, borderRadius: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)' },
+  genderActive:     { borderColor: '#006aff', backgroundColor: 'rgba(0,106,255,0.15)' },
+  genderText:       { fontSize: 14, color: 'rgba(255,255,255,0.45)', fontWeight: '600' },
+  genderTextActive: { color: '#006aff' },
+  success:          { color: '#10d343', fontSize: 13, fontWeight: '600', marginTop: 12 },
+  saveBtn:          { backgroundColor: '#006aff', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
   saveBtnText:      { color: '#fff', fontSize: 15, fontWeight: '700' },
-  logoutBtn:        { backgroundColor: '#fff', borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1.5, borderColor: '#FFCDD2' },
+  logoutBtn:        { backgroundColor: 'rgba(239,83,80,0.10)', borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(239,83,80,0.30)' },
   logoutText:       { color: '#EF5350', fontSize: 15, fontWeight: '700' },
 })

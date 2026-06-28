@@ -106,6 +106,12 @@ function getConditionTips(conditionName) {
   return DEFAULT_TIPS
 }
 
+function getHighlight(aqi, band) {
+  const prev = AQI_ADVICE[AQI_ADVICE.indexOf(band) - 1]
+  const inBand = aqi <= band.max && (!prev || aqi > prev.max)
+  return inBand ? 1 : 0.35
+}
+
 export default function RecommendationsScreen() {
   const { reading, health, loading, refresh } = useAir()
   const [refreshing, setRefreshing] = React.useState(false)
@@ -117,7 +123,7 @@ export default function RecommendationsScreen() {
   }
 
   if (loading && !reading) return (
-    <View style={styles.center}><ActivityIndicator size="large" color="#00897B" /></View>
+    <View style={styles.center}><ActivityIndicator size="large" color="#006aff" /></View>
   )
 
   const aqi    = reading?.aqi ?? 0
@@ -129,7 +135,7 @@ export default function RecommendationsScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#00897B']} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#006aff']} />}
     >
       {/* Current AQI advice */}
       <View style={[styles.aqiBanner, { borderLeftColor: advice.color }]}>
@@ -158,7 +164,7 @@ export default function RecommendationsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>AQI Action Guide</Text>
         {AQI_ADVICE.map(a => (
-          <View key={a.label} style={[styles.guideRow, aqi <= a.max && !aqi > a.max && { opacity: 1 }, { opacity: getHighlight(aqi, a) }]}>
+          <View key={a.label} style={[styles.guideRow, { opacity: getHighlight(aqi, a) }]}>
             <View style={[styles.guideBar, { backgroundColor: a.color }]} />
             <View style={styles.guideInfo}>
               <Text style={[styles.guideLabel, { color: a.color }]}>{a.label}</Text>
@@ -185,12 +191,6 @@ export default function RecommendationsScreen() {
   )
 }
 
-function getHighlight(aqi, band) {
-  const prev = AQI_ADVICE[AQI_ADVICE.indexOf(band) - 1]
-  const inBand = aqi <= band.max && (!prev || aqi > prev.max)
-  return inBand ? 1 : 0.4
-}
-
 const PROTECTIVE = [
   { icon: '😷', title: 'N95 Mask', desc: 'Filters 95% of airborne particles including PM2.5. Proper seal is critical — no beard gap.' },
   { icon: '🏠', title: 'Stay Indoors', desc: 'Indoor air can be 2–5× cleaner when windows are shut and an air purifier is running.' },
@@ -200,29 +200,29 @@ const PROTECTIVE = [
 ]
 
 const styles = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: '#F5F5F5' },
+  container:       { flex: 1, backgroundColor: '#060913' },
   content:         { padding: 16, paddingBottom: 32 },
-  center:          { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  aqiBanner:       { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#060913' },
+  aqiBanner:       { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   aqiBannerTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   aqiBannerLabel:  { fontSize: 16, fontWeight: '800' },
   aqiBannerAqi:    { fontSize: 28, fontWeight: '900' },
-  aqiBannerMsg:    { fontSize: 14, color: '#424242', lineHeight: 20 },
-  section:         { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } },
+  aqiBannerMsg:    { fontSize: 14, color: 'rgba(255,255,255,0.70)', lineHeight: 20 },
+  section:         { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   sectionHeader:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   sectionIcon:     { fontSize: 20 },
-  sectionTitle:    { fontSize: 15, fontWeight: '700', color: '#212121', marginBottom: 0 },
+  sectionTitle:    { fontSize: 15, fontWeight: '700', color: '#ffffff', marginBottom: 0 },
   tipRow:          { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
   tipDot:          { width: 7, height: 7, borderRadius: 4, marginTop: 6, flexShrink: 0 },
-  tipText:         { fontSize: 14, color: '#424242', lineHeight: 20, flex: 1 },
+  tipText:         { fontSize: 14, color: 'rgba(255,255,255,0.70)', lineHeight: 20, flex: 1 },
   guideRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
   guideBar:        { width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 40 },
   guideInfo:       { flex: 1 },
   guideLabel:      { fontSize: 13, fontWeight: '700', marginBottom: 2 },
-  guideMsg:        { fontSize: 13, color: '#616161', lineHeight: 18 },
+  guideMsg:        { fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 18 },
   measureCard:     { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: 14 },
   measureIcon:     { fontSize: 26, width: 32, textAlign: 'center' },
   measureBody:     { flex: 1 },
-  measureTitle:    { fontSize: 14, fontWeight: '700', color: '#212121', marginBottom: 2 },
-  measureDesc:     { fontSize: 13, color: '#616161', lineHeight: 18 },
+  measureTitle:    { fontSize: 14, fontWeight: '700', color: '#ffffff', marginBottom: 2 },
+  measureDesc:     { fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 18 },
 })
