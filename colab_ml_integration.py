@@ -67,51 +67,34 @@ print("Connected to RDS successfully")
 CSV_PATH = "/content/drive/MyDrive/aqi_5node_dataset (1).csv"
 
 df_csv = pd.read_csv(CSV_PATH)
-print("CSV shape:", df_csv.shape)
-print("Columns:", df_csv.columns.tolist())
+df_csv['node_id'] = df_csv['node_id'].astype(str).str.replace('_', '', regex=False)
+print("CSV loaded:", df_csv.shape)
 
-# Rename CSV columns to standard names
-COL_MAP = {
-    'node_id': 'node_id', 'Node_ID': 'node_id',
-    'latitude': 'latitude', 'Latitude': 'latitude',
-    'longitude': 'longitude', 'Longitude': 'longitude',
-    'zone_type': 'zone_type', 'Zone_Type': 'zone_type',
-    'near_highway': 'near_highway', 'Near_Highway': 'near_highway',
-    'near_factory': 'near_factory', 'Near_Factory': 'near_factory',
-    'near_construction': 'near_construction', 'Near_Construction': 'near_construction',
-    'population_density': 'population_density', 'Population_Density': 'population_density',
-    'green_cover_percentage': 'green_cover_pct', 'Green_Cover_Percentage': 'green_cover_pct',
-    'temperature': 'temperature', 'Temperature': 'temperature',
-    'humidity': 'humidity', 'Humidity': 'humidity',
-    'pressure': 'pressure', 'Pressure': 'pressure',
-    'wind_speed': 'wind_speed', 'Wind_Speed': 'wind_speed',
-    'rainfall': 'rainfall', 'Rainfall': 'rainfall',
-    'visibility': 'visibility', 'Visibility': 'visibility',
-    'traffic_density': 'traffic_density', 'Traffic_Density': 'traffic_density',
-}
-df_csv = df_csv.rename(columns={k: v for k, v in COL_MAP.items() if k in df_csv.columns})
-
-if 'node_id' in df_csv.columns:
-    df_csv['node_id'] = df_csv['node_id'].astype(str).str.replace('_', '', regex=False)
-
-# Hardcoded defaults per node (used when CSV doesn't have the column)
 NODE_META = {
-    'NODE001': {'latitude': 13.1627, 'longitude': 80.2619, 'zone_type': 'Industrial',  'zone_type_code': 2, 'near_highway': True,  'near_factory': True,  'near_construction': False, 'population_density': 60,  'green_cover_pct': 5.0},
-    'NODE002': {'latitude': 13.0850, 'longitude': 80.2101, 'zone_type': 'Residential', 'zone_type_code': 0, 'near_highway': False, 'near_factory': False, 'near_construction': False, 'population_density': 80,  'green_cover_pct': 22.0},
-    'NODE003': {'latitude': 13.0418, 'longitude': 80.2341, 'zone_type': 'Commercial',  'zone_type_code': 1, 'near_highway': True,  'near_factory': False, 'near_construction': True,  'population_density': 90,  'green_cover_pct': 8.0},
-    'NODE004': {'latitude': 13.0569, 'longitude': 80.2521, 'zone_type': 'Commercial',  'zone_type_code': 1, 'near_highway': True,  'near_factory': False, 'near_construction': False, 'population_density': 85,  'green_cover_pct': 10.0},
-    'NODE005': {'latitude': 13.0604, 'longitude': 80.2496, 'zone_type': 'Residential', 'zone_type_code': 0, 'near_highway': False, 'near_factory': False, 'near_construction': False, 'population_density': 40,  'green_cover_pct': 45.0},
+    'NODE001': {'lat': 13.1627, 'lon': 80.2619, 'zone': 'Industrial',  'zcode': 2, 'highway': True,  'factory': True,  'construction': False, 'pop': 60,  'green': 5.0},
+    'NODE002': {'lat': 13.0850, 'lon': 80.2101, 'zone': 'Residential', 'zcode': 0, 'highway': False, 'factory': False, 'construction': False, 'pop': 80,  'green': 22.0},
+    'NODE003': {'lat': 13.0418, 'lon': 80.2341, 'zone': 'Commercial',  'zcode': 1, 'highway': True,  'factory': False, 'construction': True,  'pop': 90,  'green': 8.0},
+    'NODE004': {'lat': 13.0569, 'lon': 80.2521, 'zone': 'Commercial',  'zcode': 1, 'highway': True,  'factory': False, 'construction': False, 'pop': 85,  'green': 10.0},
+    'NODE005': {'lat': 13.0604, 'lon': 80.2496, 'zone': 'Residential', 'zcode': 0, 'highway': False, 'factory': False, 'construction': False, 'pop': 40,  'green': 45.0},
 }
-WEATHER_DEFAULTS = {'temperature': 32.0, 'humidity': 72.0, 'pressure': 1010.0, 'wind_speed': 8.0, 'rainfall': 0.5, 'visibility': 8.0, 'traffic_density': 50.0}
 
 conn = get_conn()
-cur  = conn.cursor()
+cur = conn.cursor()
 
-for node_id, meta in NODE_META.items():
-    csv_node = df_csv[df_csv['node_id'] == node_id] if 'node_id' in df_csv.columns else pd.DataFrame()
+for nid, m in NODE_META.items():
+    n = df_csv[df_csv['node_id'] == nid]
 
-    def cv(col, default):
-        return csv_node[col].iloc[0] if (not csv_node.empty and col in csv_node.columns) else default
+    def g(col, default):
+        if not n.empty and col in n.columns:
+            v = n[col].iloc[0]
+            return default if pd.isna(v) else v
+        return default
+
+    def gm(col, default):
+        if not n.empty and col in n.columns:
+            v = n[col].mean()
+            return default if pd.isna(v) else float(v)
+        return default
 
     cur.execute("""
         INSERT INTO node_metadata
@@ -126,32 +109,39 @@ for node_id, meta in NODE_META.items():
             near_construction=EXCLUDED.near_construction,
             population_density=EXCLUDED.population_density,
             green_cover_percentage=EXCLUDED.green_cover_percentage
-    """, (node_id, cv('latitude', meta['latitude']), cv('longitude', meta['longitude']),
-          cv('zone_type', meta['zone_type']), int(cv('zone_type_code', meta['zone_type_code'])),
-          bool(cv('near_highway', meta['near_highway'])), bool(cv('near_factory', meta['near_factory'])),
-          bool(cv('near_construction', meta['near_construction'])),
-          int(cv('population_density', meta['population_density'])),
-          float(cv('green_cover_pct', meta['green_cover_pct']))))
-
-    wrow = {}
-    for col, default in WEATHER_DEFAULTS.items():
-        if not csv_node.empty and col in csv_node.columns:
-            val = csv_node[col].mean()
-            wrow[col] = default if np.isnan(val) else float(val)
-        else:
-            wrow[col] = default
+    """, (
+        nid,
+        float(g('latitude', m['lat'])),
+        float(g('longitude', m['lon'])),
+        str(g('zone_type', m['zone'])),
+        int(m['zcode']),
+        bool(g('near_highway', m['highway'])),
+        bool(g('near_factory', m['factory'])),
+        bool(m['construction']),
+        int(gm('population_density', m['pop'])),
+        float(m['green']),
+    ))
 
     cur.execute("""
         INSERT INTO node_weather
-            (node_id, temperature, humidity, pressure, wind_speed, rainfall, visibility, traffic_density)
+            (node_id, temperature, humidity, pressure,
+             wind_speed, rainfall, visibility, traffic_density)
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (node_id) DO UPDATE SET
             temperature=EXCLUDED.temperature, humidity=EXCLUDED.humidity,
             pressure=EXCLUDED.pressure, wind_speed=EXCLUDED.wind_speed,
             rainfall=EXCLUDED.rainfall, visibility=EXCLUDED.visibility,
             traffic_density=EXCLUDED.traffic_density, updated_at=NOW()
-    """, (node_id, wrow['temperature'], wrow['humidity'], wrow['pressure'],
-          wrow['wind_speed'], wrow['rainfall'], wrow['visibility'], wrow['traffic_density']))
+    """, (
+        nid,
+        float(gm('temperature_c', 32.0)),
+        float(gm('humidity_pct', 72.0)),
+        float(gm('pressure_hpa', 1010.0)),
+        float(gm('wind_speed_kmh', 8.0)),
+        float(gm('rainfall_mm', 0.5)),
+        float(gm('visibility_km', 8.0)),
+        float(gm('population_density', 50.0)),
+    ))
 
 conn.commit()
 conn.close()
