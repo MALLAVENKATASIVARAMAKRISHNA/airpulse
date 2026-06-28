@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { View, ActivityIndicator, StyleSheet } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
+import * as Notifications from 'expo-notifications'
 import { Storage } from './src/lib/storage'
 import { AirProvider, useAir } from './src/context/AirContext'
 import AppNavigator from './src/navigation/AppNavigator'
@@ -11,6 +12,15 @@ import FullScreenAlert from './src/components/FullScreenAlert'
 import { getAlertThreshold } from './src/lib/airQuality'
 import { registerPushToken } from './src/lib/pushNotifications'
 import { api } from './src/lib/api'
+
+// Must be called before any notification can be received
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+})
 
 function AlertWatcher() {
   const { reading, health } = useAir()
@@ -51,6 +61,7 @@ export default function App() {
   const [user, setUser]                   = useState(null)
   const [needsHealthSetup, setNeedsHealth] = useState(false)
   const [ready, setReady]                 = useState(false)
+  const [notifAlert, setNotifAlert]       = useState(null)
 
   useEffect(() => {
     Storage.getUser().then(async u => {
@@ -62,6 +73,20 @@ export default function App() {
       }
       setReady(true)
     })
+
+    // Cold launch: app was closed, user tapped the notification
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (!response) return
+      const data = response.notification.request.content.data
+      if (data?.aqi) setNotifAlert({ aqi: data.aqi, location: data.location })
+    })
+
+    // Background tap: app was suspended, user taps the notification
+    const sub = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data
+      if (data?.aqi) setNotifAlert({ aqi: data.aqi, location: data.location })
+    })
+    return () => sub.remove()
   }, [])
 
   function handleLogin(user) {
@@ -90,15 +115,23 @@ export default function App() {
   )
 
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      {!user
-        ? <AuthScreen onLogin={handleLogin} onSignup={handleSignup} />
-        : needsHealthSetup
-          ? <HealthSetupScreen onComplete={() => setNeedsHealth(false)} />
-          : <MainApp user={user} onLogout={handleLogout} />
-      }
-    </NavigationContainer>
+    <>
+      <NavigationContainer>
+        <StatusBar style="light" />
+        {!user
+          ? <AuthScreen onLogin={handleLogin} onSignup={handleSignup} />
+          : needsHealthSetup
+            ? <HealthSetupScreen onComplete={() => setNeedsHealth(false)} />
+            : <MainApp user={user} onLogout={handleLogout} />
+        }
+      </NavigationContainer>
+      <FullScreenAlert
+        visible={!!notifAlert}
+        aqi={notifAlert?.aqi}
+        location={notifAlert?.location}
+        onDismiss={() => setNotifAlert(null)}
+      />
+    </>
   )
 }
 

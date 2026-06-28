@@ -103,7 +103,7 @@ def check_and_notify(node_id: str, aqi: int, location: str):
                         token=u['push_token'],
                         title=f'⚠️ Air Quality Alert — {location}',
                         body=f'AQI is {aqi}, which exceeds your personal safe limit of {threshold}. Stay indoors.',
-                        data={'node_id': node_id, 'aqi': aqi, 'threshold': threshold},
+                        data={'node_id': node_id, 'aqi': aqi, 'threshold': threshold, 'location': location},
                     )
                     try:
                         query("""
