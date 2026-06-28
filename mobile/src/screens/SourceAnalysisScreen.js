@@ -41,8 +41,8 @@ function getCauseStyle(cause) {
 
 function formatTime(ts) {
   if (!ts) return '—'
-  const d = new Date(ts)
-  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const t = /Z|[+-]\d{2}:\d{2}$/.test(ts) ? ts : ts + 'Z'
+  return new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 export default function SourceAnalysisScreen() {

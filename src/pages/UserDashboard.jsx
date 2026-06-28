@@ -48,7 +48,8 @@ const POLLUTANTS = [
 
 function formatTime(ts) {
   if (!ts) return '—'
-  return new Date(ts).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
+  const t = /Z|[+-]\d{2}:\d{2}$/.test(ts) ? ts : ts + 'Z'
+  return new Date(t).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
 }
 
 export default function UserDashboard({ profile, health, onSignOut }) {

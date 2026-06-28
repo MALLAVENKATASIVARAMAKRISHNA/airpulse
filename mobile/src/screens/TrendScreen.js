@@ -9,7 +9,8 @@ const W = Dimensions.get('window').width
 
 function formatHour(ts) {
   if (!ts) return ''
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  const t = /Z|[+-]\d{2}:\d{2}$/.test(ts) ? ts : ts + 'Z'
+  return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
 export default function TrendScreen() {
