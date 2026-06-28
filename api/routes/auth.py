@@ -105,6 +105,19 @@ def save_push_token(data: dict, current_user=Depends(get_current_user)):
           (data.get('token'), current_user['user_id']), fetch='none')
     return {'ok': True}
 
+@router.get('/alerts')
+def get_alert_history(current_user=Depends(get_current_user)):
+    rows = query("""
+        SELECT al.log_id, al.alerted_at, r.aqi, r.node_id, n.location
+        FROM user_alert_log al
+        JOIN aqi_readings r ON r.reading_id = al.reading_id
+        JOIN nodes n ON n.node_id = r.node_id
+        WHERE al.user_id = %s
+        ORDER BY al.alerted_at DESC
+        LIMIT 50
+    """, (current_user['user_id'],))
+    return [dict(r) for r in rows] if rows else []
+
 @router.get('/health')
 def get_health(current_user=Depends(get_current_user)):
     row = query("""

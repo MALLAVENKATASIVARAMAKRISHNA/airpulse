@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import LoadingScreen from './components/LoadingScreen'
 import AdminDashboard from './pages/AdminDashboard'
+import AuthorityDashboard from './pages/AuthorityDashboard'
 import AuthPage from './pages/AuthPage'
 import HealthOnboarding from './pages/HealthOnboarding'
 import UserDashboard from './pages/UserDashboard'
 import { api } from './lib/api'
 
 export default function App() {
-  const [user, setUser]         = useState(api.getUser)
-  const [health, setHealth]     = useState(null)
+  const [user,       setUser]       = useState(api.getUser)
+  const [health,     setHealth]     = useState(null)
   const [conditions, setConditions] = useState([])
-  const [loading, setLoading]   = useState(!!api.getUser())
+  const [loading,    setLoading]    = useState(!!api.getUser())
 
   const loadHealth = useCallback(async (u) => {
     if (!u || u.role !== 'user') { setLoading(false); return }
@@ -50,15 +51,14 @@ export default function App() {
   if (user.role === 'admin')
     return <AdminDashboard profile={user} onSignOut={signOut} />
 
+  if (user.role === 'authority')
+    return <AuthorityDashboard profile={user} onSignOut={signOut} />
+
   if (!health)
-    return <HealthOnboarding
-      profile={user}
-      conditions={conditions}
-      onComplete={async () => {
-        const h = await api.getHealth()
-        setHealth(h)
-      }}
-    />
+    return <HealthOnboarding profile={user} conditions={conditions} onComplete={async () => {
+      const [h, c] = await Promise.all([api.getHealth(), api.conditions()])
+      setHealth(h); setConditions(c)
+    }} />
 
   return <UserDashboard profile={user} health={health} onSignOut={signOut} />
 }

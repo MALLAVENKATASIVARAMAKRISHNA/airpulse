@@ -105,6 +105,14 @@ def check_and_notify(node_id: str, aqi: int, location: str):
                         body=f'AQI is {aqi}, which exceeds your personal safe limit of {threshold}. Stay indoors.',
                         data={'node_id': node_id, 'aqi': aqi, 'threshold': threshold},
                     )
+                    try:
+                        query("""
+                            INSERT INTO user_alert_log (user_id, reading_id, alerted_at)
+                            SELECT %s, reading_id, NOW() FROM aqi_readings
+                            WHERE node_id = %s ORDER BY reading_id DESC LIMIT 1
+                        """, (u['user_id'], node_id), fetch='none')
+                    except Exception:
+                        pass
         except Exception as e:
             print(f'Notification check error: {e}')
 
