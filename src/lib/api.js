@@ -48,8 +48,9 @@ export const api = {
   healthRisk:  (body)   => req('POST', '/api/ml/health-risk', body),
 
   // Users (admin)
-  users:     () => req('GET', '/api/users/'),
-  userCount: () => req('GET', '/api/users/count'),
+  users:          () => req('GET', '/api/users/'),
+  userCount:      () => req('GET', '/api/users/count'),
+  updateUserRole: (userId, role) => req('PATCH', `/api/users/${userId}/role`, { role }),
 
   // Readings (admin)
   insertReading: (data) => req('POST', '/api/readings/', data),

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { RefreshCw, MapPin, Wind, Droplets, Thermometer, Eye } from 'lucide-react'
+import { RefreshCw, MapPin } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import ForecastPage from './ForecastPage'
 import HotspotPage from './HotspotPage'
@@ -55,7 +55,6 @@ export default function UserDashboard({ profile, health, onSignOut }) {
   const [tab,      setTab]      = useState('overview')
   const [reading,  setReading]  = useState(null)
   const [readings, setReadings] = useState([])
-  const [weather,  setWeather]  = useState(null)
   const [loading,  setLoading]  = useState(true)
 
   const load = useCallback(async () => {
@@ -74,13 +73,6 @@ export default function UserDashboard({ profile, health, onSignOut }) {
     return () => clearInterval(id)
   }, [load])
 
-  // Fetch weather from OpenWeather for user's city
-  useEffect(() => {
-    fetch(`https://api.openweathermap.org/data/2.5/weather?q=Chennai&appid=de075a9d20d78fbe7cc5ccac30d2e9ce&units=metric`)
-      .then(r => r.json()).then(d => {
-        if (d.main) setWeather({ temp: Math.round(d.main.temp), humidity: d.main.humidity, wind: Math.round((d.wind?.speed||0)*3.6), visibility: d.visibility ? Math.round(d.visibility/1000) : 8 })
-      }).catch(()=>{})
-  }, [])
 
   const aqi      = reading?.aqi || 0
   const meta     = aqiMeta(aqi)
@@ -131,49 +123,23 @@ export default function UserDashboard({ profile, health, onSignOut }) {
           </div>
         )}
 
-        {/* AQI Hero + Weather */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* AQI big card */}
-          <div className="md:col-span-2 glass-card p-8 flex flex-col items-center text-center" style={{ borderColor: meta.color + '30' }}>
-            <p className="text-xs text-white/40 uppercase tracking-widest mb-4">Air Quality Index</p>
-            <div className="relative mb-4">
-              <div className="text-8xl font-black" style={{ color: meta.color }}>{aqi}</div>
-              <div className="absolute -right-6 top-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: meta.bg, color: meta.color }}>{meta.label}</div>
-            </div>
-            {/* AQI bar */}
-            <div className="w-full h-3 rounded-full bg-gradient-to-r from-[#00E400] via-[#FFFF00] via-[#FF7E00] to-[#8F3F97] relative mb-2">
-              <div className="absolute -top-1 w-5 h-5 rounded-full bg-white border-2 border-darkBg shadow-lg transition-all"
-                style={{ left: `${Math.min(aqi/500*100,98)}%`, transform:'translateX(-50%)' }} />
-            </div>
-            <div className="flex justify-between w-full text-[10px] text-white/30 mt-1">
-              <span>0</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500</span>
-            </div>
-            {reading?.dominant_pollutant && (
-              <p className="mt-4 text-sm text-white/50">Dominant: <span className="font-bold" style={{ color: meta.color }}>{reading.dominant_pollutant}</span></p>
-            )}
+        {/* AQI Hero */}
+        <div className="glass-card p-8 flex flex-col items-center text-center" style={{ borderColor: meta.color + '30' }}>
+          <p className="text-xs text-white/40 uppercase tracking-widest mb-4">Air Quality Index</p>
+          <div className="relative mb-4">
+            <div className="text-8xl font-black" style={{ color: meta.color }}>{aqi}</div>
+            <div className="absolute -right-6 top-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: meta.bg, color: meta.color }}>{meta.label}</div>
           </div>
-
-          {/* Weather */}
-          <div className="glass-card p-6 space-y-4">
-            <p className="text-xs text-white/40 uppercase tracking-widest">Weather · Chennai</p>
-            {weather ? (
-              <>
-                <div className="text-4xl font-black text-white">{weather.temp}°C</div>
-                {[
-                  { icon: <Droplets size={14}/>, label:'Humidity',    val:`${weather.humidity}%` },
-                  { icon: <Wind size={14}/>,     label:'Wind',        val:`${weather.wind} km/h` },
-                  { icon: <Eye size={14}/>,      label:'Visibility',  val:`${weather.visibility} km` },
-                ].map(({ icon, label, val }) => (
-                  <div key={label} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-1.5 text-white/40">{icon}{label}</span>
-                    <span className="font-semibold text-white">{val}</span>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <div className="text-white/20 text-sm">Loading weather…</div>
-            )}
+          <div className="w-full h-3 rounded-full bg-gradient-to-r from-[#00E400] via-[#FFFF00] via-[#FF7E00] to-[#8F3F97] relative mb-2">
+            <div className="absolute -top-1 w-5 h-5 rounded-full bg-white border-2 border-darkBg shadow-lg transition-all"
+              style={{ left: `${Math.min(aqi/500*100,98)}%`, transform:'translateX(-50%)' }} />
           </div>
+          <div className="flex justify-between w-full text-[10px] text-white/30 mt-1">
+            <span>0</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500</span>
+          </div>
+          {reading?.dominant_pollutant && (
+            <p className="mt-4 text-sm text-white/50">Dominant: <span className="font-bold" style={{ color: meta.color }}>{reading.dominant_pollutant}</span></p>
+          )}
         </div>
 
         {/* Pollutant quick stats */}

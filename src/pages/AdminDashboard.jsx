@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { Activity, Check, MapPin, Pause, Play, Plus, RefreshCw, Search, Users, Zap, Globe } from 'lucide-react'
+import { Activity, Check, MapPin, Pause, Play, Plus, RefreshCw, Search, Shield, Users, Zap, Globe } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { api } from '../lib/api'
 
@@ -69,6 +69,13 @@ export default function AdminDashboard({ profile, onSignOut }) {
   }
 
   function setOv(node_id, k, v) { setOverrides(p=>({...p,[node_id]:{...(p[node_id]||{}),[k]:v}})) }
+
+  async function updateRole(userId, newRole) {
+    try {
+      await api.updateUserRole(userId, newRole)
+      setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, role: newRole } : u))
+    } catch(e) { alert(e.message) }
+  }
 
   const chartData = [...nodes].sort((a,b)=>(b.aqi||0)-(a.aqi||0)).map(n=>({
     name: n.location?.split(' ')[0], AQI: n.aqi||0, fill: aqiMeta(n.aqi||0).color
@@ -182,11 +189,12 @@ export default function AdminDashboard({ profile, onSignOut }) {
               className="bg-white/5 border border-white/10 rounded-btn pl-8 pr-4 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-brandCyan/40 w-56"/>
           </div>
         </div>
+        <p className="text-xs text-white/30 mb-4">Grant Authority access to let a user view the city-wide Authority Dashboard.</p>
         <div className="glass-card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                {['Name','Email','Node','Role'].map(h=>(
+                {['Name','Email','Node','Role','Action'].map(h=>(
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -195,13 +203,28 @@ export default function AdminDashboard({ profile, onSignOut }) {
               {filteredUsers.map(u=>(
                 <tr key={u.user_id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                   <td className="px-4 py-3 font-medium text-white">{u.full_name}</td>
-                  <td className="px-4 py-3 text-white/60">{u.email}</td>
-                  <td className="px-4 py-3 text-white/60">{u.node_id}</td>
+                  <td className="px-4 py-3 text-white/60 text-xs">{u.email}</td>
+                  <td className="px-4 py-3 text-white/40 text-xs">{u.node_id}</td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border
-                      ${u.role==='admin'?'text-orange-400 border-orange-400/30 bg-orange-400/10':'text-brandCyan border-brandCyan/30 bg-brandCyan/10'}`}>
+                      ${u.role==='authority'
+                        ?'text-purple-400 border-purple-400/30 bg-purple-400/10'
+                        :'text-brandCyan border-brandCyan/30 bg-brandCyan/10'}`}>
                       {u.role}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.role === 'authority' ? (
+                      <button onClick={()=>updateRole(u.user_id,'user')}
+                        className="flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all">
+                        Revoke
+                      </button>
+                    ) : (
+                      <button onClick={()=>updateRole(u.user_id,'authority')}
+                        className="flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-all">
+                        <Shield size={10}/> Make Authority
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

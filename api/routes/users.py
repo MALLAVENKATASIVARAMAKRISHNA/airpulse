@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Body
 from database import query
 from auth import admin_only
 
@@ -12,7 +12,7 @@ def get_users(current_user=Depends(admin_only)):
         FROM users u
         LEFT JOIN user_health uh ON uh.user_id = u.user_id
         LEFT JOIN health_conditions hc ON hc.condition_id = uh.condition_id
-        WHERE u.role = 'user'
+        WHERE u.role != 'admin'
         ORDER BY u.user_id
     """)
 
@@ -20,3 +20,10 @@ def get_users(current_user=Depends(admin_only)):
 def get_user_count(current_user=Depends(admin_only)):
     result = query("SELECT COUNT(*) as count FROM users WHERE role = 'user'", fetch='one')
     return {'count': result['count']}
+
+@router.patch('/{user_id}/role')
+def update_user_role(user_id: int, role: str = Body(..., embed=True), current_user=Depends(admin_only)):
+    if role not in ('user', 'authority'):
+        raise HTTPException(status_code=400, detail='Role must be user or authority')
+    query("UPDATE users SET role = %s WHERE user_id = %s AND role != 'admin'", (role, user_id))
+    return {'ok': True}
