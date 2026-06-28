@@ -296,65 +296,54 @@ conn.close()
 print("Anomaly flags updated in RDS successfully")
 
 # ============================================================
-# CELL 7 — Cause Analysis (Rule-Based → Update RDS)
+# CELL 7 — Cause Analysis (Rule-Based → Batch Update RDS)
 # ============================================================
 
-def identify_cause(pm25, pm10, co, co2, no2, ozone, smoke, traffic, near_factory, near_construction, wind_speed, rainfall):
-    scores = {}
+from psycopg2.extras import execute_values
 
-    v = 0
-    if traffic > 70:       v += 35
-    if co > 2:             v += 25
-    if no2 > 40:           v += 20
-    if pm25 > 80:          v += 20
-    scores['Vehicle Emissions'] = v
+def identify_cause(row):
+    pm25, pm10, co, co2   = row['pm25'], row['pm10'], row['co'], row['co2']
+    no2, ozone, smoke     = row['no2'], row['ozone'], row['smoke']
+    traffic               = row['traffic_density']
+    near_factory          = bool(row['near_factory'])
+    near_construction     = bool(row['near_construction'])
+    wind_speed, rainfall  = row['wind_speed'], row['rainfall']
 
-    i = 0
-    if near_factory:       i += 35
-    if co2 > 800:          i += 25
-    if no2 > 45:           i += 20
-    if ozone > 80:         i += 20
-    scores['Industrial Emissions'] = i
+    scores = {
+        'Vehicle Emissions':    (35 if traffic > 70 else 0) + (25 if co > 2 else 0) + (20 if no2 > 40 else 0) + (20 if pm25 > 80 else 0),
+        'Industrial Emissions': (35 if near_factory else 0) + (25 if co2 > 800 else 0) + (20 if no2 > 45 else 0) + (20 if ozone > 80 else 0),
+        'Construction Dust':    (40 if near_construction else 0) + (35 if pm10 > 150 else 0) + (15 if wind_speed > 10 else 0),
+        'Waste Burning':        (40 if smoke > 70 else 0) + (20 if co > 2 else 0) + (25 if pm25 > 100 else 0),
+        'Weather Conditions':   (30 if wind_speed < 2 else 0) + (20 if rainfall == 0 else 0) + (25 if pm25 > 90 else 0),
+    }
+    return max(scores, key=scores.get)
 
-    c = 0
-    if near_construction:  c += 40
-    if pm10 > 150:         c += 35
-    if wind_speed > 10:    c += 15
-    scores['Construction Dust'] = c
+# Compute all causes in Python (no DB round-trips during computation)
+df['cause'] = df.apply(identify_cause, axis=1)
+print(f"Causes computed for {len(df)} rows")
+print(df['cause'].value_counts())
 
-    b = 0
-    if smoke > 70:         b += 40
-    if co > 2:             b += 20
-    if pm25 > 100:         b += 25
-    scores['Waste Burning'] = b
-
-    w = 0
-    if wind_speed < 2:     w += 30
-    if rainfall == 0:      w += 20
-    if pm25 > 90:          w += 25
-    scores['Weather Conditions'] = w
-
-    best = max(scores, key=scores.get)
-    return best
-
+# Single bulk UPDATE — sends at most a handful of SQL statements instead of 14K
 conn = get_conn()
 cur  = conn.cursor()
 
-updated = 0
-for _, row in df.iterrows():
-    cause = identify_cause(
-        pm25=row['pm25'], pm10=row['pm10'], co=row['co'], co2=row['co2'],
-        no2=row['no2'], ozone=row['ozone'], smoke=row['smoke'],
-        traffic=row['traffic_density'], near_factory=bool(row['near_factory']),
-        near_construction=bool(row['near_construction']),
-        wind_speed=row['wind_speed'], rainfall=row['rainfall'],
-    )
-    cur.execute("UPDATE aqi_readings SET cause = %s WHERE reading_id = %s", (cause, int(row['reading_id'])))
-    updated += 1
+data = [(row['cause'], int(row['reading_id'])) for _, row in df[['cause', 'reading_id']].iterrows()]
+
+execute_values(
+    cur,
+    """
+    UPDATE aqi_readings AS r
+    SET cause = v.cause
+    FROM (VALUES %s) AS v(cause, reading_id)
+    WHERE r.reading_id = v.reading_id::int
+    """,
+    data,
+    page_size=500,
+)
 
 conn.commit()
 conn.close()
-print(f"Cause updated for {updated} readings in RDS successfully")
+print(f"Cause updated for {len(data)} readings in RDS successfully")
 
 # ============================================================
 # CELL 8 — Hotspot Clustering (DBSCAN) → Save to RDS
