@@ -42,5 +42,6 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
         data.sub_aqi_pm25, data.sub_aqi_pm10, data.sub_aqi_co, data.sub_aqi_nh3,
         data.sub_aqi_no2, data.sub_aqi_ozone, data.dominant_pollutant, data.cause
     ), fetch='one')
-    check_and_notify(data.node_id, data.aqi, data.node_id)
+    node = query("SELECT location FROM nodes WHERE node_id = %s", (data.node_id,), fetch='one')
+    check_and_notify(data.node_id, data.aqi, node['location'] if node else data.node_id)
     return dict(row)

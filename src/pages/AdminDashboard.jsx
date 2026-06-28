@@ -58,12 +58,22 @@ export default function AdminDashboard({ profile, onSignOut }) {
   async function startSim()  { try { await api.simStart(simInterval); await load(); setSimLog(l=>[`▶ Simulation started (${simInterval}s interval)`,...l.slice(0,49)]) } catch(e){setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)])} }
   async function stopSim()   { try { await api.simStop();              await load(); setSimLog(l=>['⏹ Simulation stopped',...l.slice(0,49)]) } catch(e){setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)])} }
 
-  async function applyOverride(node_id) {
-    const ov = overrides[node_id]
-    if (!ov?.aqi) return
+  async function insertReading(node_id, location) {
+    const ov = overrides[node_id] || {}
+    if (!ov.aqi) return setSimLog(l=>['✗ AQI is required',...l.slice(0,49)])
     try {
-      await api.simOverride(node_id, { aqi:parseInt(ov.aqi)||150, pm25:parseFloat(ov.pm25)||0, pm10:parseFloat(ov.pm10)||0, no2:parseFloat(ov.no2)||0 })
-      setSimLog(l=>[`✓ Override applied to ${node_id} → AQI ${ov.aqi}`,...l.slice(0,49)])
+      await api.insertReading({
+        node_id,
+        aqi:   parseInt(ov.aqi)   || 0,
+        pm25:  parseFloat(ov.pm25)  || 0,
+        pm10:  parseFloat(ov.pm10)  || 0,
+        co:    parseFloat(ov.co)    || 0,
+        nh3:   parseFloat(ov.nh3)   || 0,
+        no2:   parseFloat(ov.no2)   || 0,
+        ozone: parseFloat(ov.ozone) || 0,
+      })
+      setSimLog(l=>[`✓ Reading inserted for ${location} → AQI ${ov.aqi}`,...l.slice(0,49)])
+      setOverrides(p => ({ ...p, [node_id]: {} }))
       await load()
     } catch(e) { setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)]) }
   }
@@ -260,26 +270,44 @@ export default function AdminDashboard({ profile, onSignOut }) {
           </button>
         </div>
 
-        {/* Overrides */}
+        {/* Manual Reading Insert */}
         <div className="space-y-3">
-          <p className="text-xs text-white/40 uppercase tracking-wide font-semibold">Node Overrides</p>
+          <p className="text-xs text-white/40 uppercase tracking-wide font-semibold">Manual Reading Insert</p>
+          <p className="text-xs text-white/25">Inserts a reading directly into the database and triggers push notifications — no simulation required.</p>
           {nodes.map(n=>{
             const ov=overrides[n.node_id]||{}
             const m=aqiMeta(n.aqi||0)
+            const fields = [
+              { k:'aqi',   label:'AQI',   required:true },
+              { k:'pm25',  label:'PM2.5' },
+              { k:'pm10',  label:'PM10'  },
+              { k:'co',    label:'CO'    },
+              { k:'nh3',   label:'NH3'   },
+              { k:'no2',   label:'NO2'   },
+              { k:'ozone', label:'Ozone' },
+            ]
             return (
-              <div key={n.node_id} className="glass-card p-4 flex items-center gap-4 flex-wrap">
-                <div className="flex-1 min-w-[120px]">
-                  <p className="text-sm font-bold text-white">{n.location}</p>
-                  <p className="text-xs font-bold" style={{color:m.color}}>Current: {n.aqi||0}</p>
+              <div key={n.node_id} className="glass-card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-bold text-white">{n.location}</p>
+                    <p className="text-xs font-bold mt-0.5" style={{color:m.color}}>Current AQI: {n.aqi||0}</p>
+                  </div>
+                  <button onClick={()=>insertReading(n.node_id, n.location)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-brandBlue/20 border border-brandBlue/30 text-brandCyan rounded-btn text-xs font-semibold hover:bg-brandBlue/30 transition-all">
+                    <Plus size={12}/> Insert Reading
+                  </button>
                 </div>
-                {['aqi','pm25','pm10','no2'].map(k=>(
-                  <input key={k} type="number" placeholder={k.toUpperCase()} value={ov[k]||''} onChange={e=>setOv(n.node_id,k,e.target.value)}
-                    className="w-20 bg-white/5 border border-white/10 rounded-btn px-2 py-1.5 text-xs text-white outline-none focus:border-brandCyan/40 placeholder-white/25"/>
-                ))}
-                <button onClick={()=>applyOverride(n.node_id)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-brandBlue/20 border border-brandBlue/30 text-brandCyan rounded-btn text-xs font-semibold hover:bg-brandBlue/30 transition-all">
-                  <Check size={12}/> Apply
-                </button>
+                <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+                  {fields.map(({k, label, required})=>(
+                    <div key={k}>
+                      <p className="text-[10px] text-white/35 mb-1">{label}{required?' *':''}</p>
+                      <input type="number" placeholder="—" value={ov[k]||''} onChange={e=>setOv(n.node_id,k,e.target.value)}
+                        className={`w-full bg-white/5 border rounded-btn px-2 py-1.5 text-xs text-white outline-none placeholder-white/20
+                          ${required?'border-brandCyan/30 focus:border-brandCyan/60':'border-white/10 focus:border-brandCyan/40'}`}/>
+                    </div>
+                  ))}
+                </div>
               </div>
             )
           })}
