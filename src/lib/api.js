@@ -42,9 +42,10 @@ export const api = {
   nodeReadings: (nodeId) => req('GET', `/api/nodes/${nodeId}/readings`),
 
   // ML
-  predictions: (nodeId) => req('GET', `/api/ml/predictions/${nodeId}`),
-  hotspots:    ()       => req('GET', '/api/ml/hotspots'),
-  anomalies:   ()       => req('GET', '/api/ml/anomalies'),
+  predictions: (nodeId) => req('GET',  `/api/ml/predictions/${nodeId}`),
+  hotspots:    ()       => req('GET',  '/api/ml/hotspots'),
+  anomalies:   ()       => req('GET',  '/api/ml/anomalies'),
+  healthRisk:  (body)   => req('POST', '/api/ml/health-risk', body),
 
   // Users (admin)
   users:     () => req('GET', '/api/users/'),
