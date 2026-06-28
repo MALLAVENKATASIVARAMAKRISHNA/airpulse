@@ -1,12 +1,30 @@
 import threading
 import time
 import random
+import json
+import os
+import boto3
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from database import query
 from auth import admin_only
 from notifications import check_and_notify
+
+IOT_ENDPOINT = os.environ.get('AWS_IOT_ENDPOINT', 'a154ie33qhakmk-ats.iot.ap-south-1.amazonaws.com')
+
+_iot_client = None
+
+def get_iot_client():
+    global _iot_client
+    if _iot_client is None:
+        _iot_client = boto3.client(
+            'iot-data',
+            region_name=os.environ.get('AWS_REGION', 'ap-south-1'),
+            endpoint_url=f'https://{IOT_ENDPOINT}',
+            aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+        )
+    return _iot_client
 
 router = APIRouter()
 
@@ -75,17 +93,33 @@ def generate_and_insert(node_id, base):
     dominant = max(subs, key=subs.get)
     aqi = override.get('aqi', max(subs.values()))
 
-    query("""
-        INSERT INTO aqi_readings (
-            node_id, aqi, pm25, pm10, co, nh3, no2, ozone, co2, voc, smoke,
-            sub_aqi_pm25, sub_aqi_pm10, sub_aqi_co, sub_aqi_nh3,
-            sub_aqi_no2, sub_aqi_ozone, dominant_pollutant, cause, recorded_at
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
-    """, (
-        node_id, aqi, pm25, pm10, co, nh3, no2, ozone, co2, voc, smoke,
-        subs['PM2.5'], subs['PM10'], subs['CO'], 0,
-        subs['NO2'], subs['Ozone'], dominant, CAUSE_MAP[dominant]
-    ), fetch='none')
+    payload = {
+        'node_id':           node_id,
+        'aqi':               aqi,
+        'pm25':              pm25,
+        'pm10':              pm10,
+        'co':                co,
+        'nh3':               nh3,
+        'no2':               no2,
+        'ozone':             ozone,
+        'co2':               co2,
+        'voc':               voc,
+        'smoke':             smoke,
+        'sub_aqi_pm25':      subs['PM2.5'],
+        'sub_aqi_pm10':      subs['PM10'],
+        'sub_aqi_co':        subs['CO'],
+        'sub_aqi_nh3':       0,
+        'sub_aqi_no2':       subs['NO2'],
+        'sub_aqi_ozone':     subs['Ozone'],
+        'dominant_pollutant': dominant,
+        'cause':             CAUSE_MAP[dominant],
+    }
+
+    get_iot_client().publish(
+        topic=f'airpulse/nodes/{node_id}/reading',
+        qos=1,
+        payload=json.dumps(payload),
+    )
 
     entry = {
         'time': datetime.now().strftime('%H:%M:%S'),
