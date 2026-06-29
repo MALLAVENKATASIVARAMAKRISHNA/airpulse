@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "6a7c2b13-292e-490d-a118-a7333329c004"
+      }
+    },
+    "android": {
+      "package": "com.ramakrishna2003.airpulsedashboard"
+    }
+  }
+}

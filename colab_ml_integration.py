@@ -15,7 +15,7 @@ DB : airpulse | User: airpulse_admin
 # Paste this in Cell 1 and run it
 
 """
-!pip install psycopg2-binary catboost xgboost scikit-learn pandas numpy joblib -q
+!pip install psycopg2-binary scikit-learn pandas numpy joblib -q
 """
 
 # ============================================================
@@ -202,10 +202,10 @@ df = df.dropna().reset_index(drop=True)
 print("After feature engineering:", df.shape)
 
 # ============================================================
-# CELL 5 — Train CatBoost Forecast Model + Save to RDS
+# CELL 5 — Train GradientBoosting Forecast Model + Save to Drive
 # ============================================================
 
-from catboost import CatBoostRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 
 FEATURES = [
@@ -229,14 +229,14 @@ for horizon, target in [('6h', 'aqi_after_6h'), ('24h', 'aqi_after_24h'), ('48h'
     y_train = df[target].iloc[:split]
     y_test  = df[target].iloc[split:]
 
-    cat = CatBoostRegressor(iterations=500, depth=8, learning_rate=0.05, verbose=False, random_seed=42)
-    cat.fit(X_train, y_train)
-    pred = cat.predict(X_test)
+    gbr = GradientBoostingRegressor(n_estimators=300, max_depth=6, learning_rate=0.05, random_state=42)
+    gbr.fit(X_train, y_train)
+    pred = gbr.predict(X_test)
 
     print(f"{horizon} — MAE: {mean_absolute_error(y_test, pred):.1f}  R²: {r2_score(y_test, pred):.3f}")
 
-    models[horizon] = cat
-    joblib.dump(cat, f"/content/drive/MyDrive/aqi_forecast_{horizon}.pkl")
+    models[horizon] = gbr
+    joblib.dump(gbr, f"/content/drive/MyDrive/aqi_forecast_{horizon}.pkl")
 
 # Save predictions for latest reading per node to RDS
 conn = get_conn()
