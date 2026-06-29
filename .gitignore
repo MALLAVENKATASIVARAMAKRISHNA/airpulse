@@ -6,3 +6,4 @@ dist/
 
 # Project intelligence — never commit
 CLAUDE.md
+certs/
