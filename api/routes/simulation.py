@@ -8,8 +8,6 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from auth import admin_only
-from database import query
-from notifications import check_and_notify
 
 IOT_ENDPOINT = os.environ.get('AWS_IOT_ENDPOINT', 'a154ie33qhakmk-ats.iot.ap-south-1.amazonaws.com')
 
@@ -116,20 +114,7 @@ def generate_and_insert(node_id, base):
         'cause':             CAUSE_MAP[dominant],
     }
 
-    # Insert to DB
-    query("""
-        INSERT INTO aqi_readings (
-            node_id, aqi, pm25, pm10, co, nh3, no2, ozone, co2, voc, smoke,
-            sub_aqi_pm25, sub_aqi_pm10, sub_aqi_co, sub_aqi_nh3,
-            sub_aqi_no2, sub_aqi_ozone, dominant_pollutant, cause, recorded_at
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
-    """, (
-        node_id, aqi, pm25, pm10, co, nh3, no2, ozone, co2, voc, smoke,
-        subs['PM2.5'], subs['PM10'], subs['CO'], 0,
-        subs['NO2'], subs['Ozone'], dominant, CAUSE_MAP[dominant],
-    ), fetch='none')
-
-    # Publish to IoT Core
+    # Publish to IoT Core — Lambda handles DB insert + ML + notifications
     try:
         get_iot_client().publish(
             topic=f'airpulse/readings/{node_id}',
@@ -147,8 +132,6 @@ def generate_and_insert(node_id, base):
         'dominant': dominant,
     }
     sim.log = ([entry] + sim.log)[:20]
-
-    check_and_notify(node_id, aqi, base['name'])
 
 def simulation_loop():
     while sim.running:
