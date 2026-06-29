@@ -88,7 +88,6 @@ def check_and_notify(node_id: str, aqi: int, location: str):
                 JOIN user_health uh ON uh.user_id = u.user_id
                 JOIN health_conditions hc ON hc.condition_id = uh.condition_id
                 WHERE u.node_id = %s
-                  AND u.push_token IS NOT NULL
                   AND u.role = 'user'
             """, (node_id,))
 
@@ -99,12 +98,7 @@ def check_and_notify(node_id: str, aqi: int, location: str):
                     u['age'] or 30,
                 )
                 if aqi >= threshold:
-                    _send(
-                        token=u['push_token'],
-                        title=f'⚠️ Air Quality Alert — {location}',
-                        body=f'AQI is {aqi}, which exceeds your personal safe limit of {threshold}. Stay indoors.',
-                        data={'node_id': node_id, 'aqi': aqi, 'threshold': threshold, 'location': location},
-                    )
+                    # Log for all users (web + mobile) so Alert Center shows history
                     try:
                         query("""
                             INSERT INTO user_alert_log (user_id, reading_id, alerted_at)
@@ -113,6 +107,14 @@ def check_and_notify(node_id: str, aqi: int, location: str):
                         """, (u['user_id'], node_id), fetch='none')
                     except Exception:
                         pass
+                    # Push notification only for mobile users with a token
+                    if u['push_token']:
+                        _send(
+                            token=u['push_token'],
+                            title=f'⚠️ Air Quality Alert — {location}',
+                            body=f'AQI is {aqi}, which exceeds your personal safe limit of {threshold}. Stay indoors.',
+                            data={'node_id': node_id, 'aqi': aqi, 'threshold': threshold, 'location': location},
+                        )
         except Exception as e:
             print(f'Notification check error: {e}')
 

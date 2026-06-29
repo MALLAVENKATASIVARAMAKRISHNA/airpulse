@@ -4,7 +4,8 @@ import { api } from '../lib/api'
 
 function timeAgo(ts) {
   if (!ts) return '—'
-  const diff = Date.now() - new Date(ts).getTime()
+  const t = /Z|[+-]\d{2}:\d{2}$/.test(ts) ? ts : ts + 'Z'
+  const diff = Date.now() - new Date(t).getTime()
   const m = Math.floor(diff / 60000)
   if (m < 1)   return 'Just now'
   if (m < 60)  return `${m} min ago`
@@ -70,8 +71,8 @@ export default function AlertCenterPage({ profile }) {
                 <p className="text-sm text-white/50">
                   AQI reached <span className="text-red-400 font-bold">{alert.aqi}</span> — exceeded your personal safe limit.
                 </p>
-                {alert.recorded_at && (
-                  <p className="text-xs text-white/25 mt-1">{new Date(alert.alerted_at).toLocaleString()}</p>
+                {alert.alerted_at && (
+                  <p className="text-xs text-white/25 mt-1">{new Date(/Z|[+-]\d{2}:\d{2}$/.test(alert.alerted_at) ? alert.alerted_at : alert.alerted_at + 'Z').toLocaleString()}</p>
                 )}
               </div>
             </div>
