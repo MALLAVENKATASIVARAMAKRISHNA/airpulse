@@ -112,6 +112,7 @@ def generate_and_insert(node_id, base):
         'sub_aqi_ozone':     subs['Ozone'],
         'dominant_pollutant': dominant,
         'cause':             CAUSE_MAP[dominant],
+        'recorded_at':       datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
     }
 
     # Publish to IoT Core — Lambda handles DB insert + ML + notifications

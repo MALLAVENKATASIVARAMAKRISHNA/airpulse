@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, nodes, users, readings, simulation, ml
+from routes import auth, nodes, users, readings, simulation, ml, iot
 
 app = FastAPI(title='AirPulse API', version='1.0.0')
 
@@ -18,6 +18,7 @@ app.include_router(users.router,      prefix='/api/users')
 app.include_router(readings.router,   prefix='/api/readings')
 app.include_router(simulation.router, prefix='/api/simulation')
 app.include_router(ml.router,         prefix='/api/ml')
+app.include_router(iot.router,        prefix='/api/iot')
 
 @app.get('/api/health')
 def health():

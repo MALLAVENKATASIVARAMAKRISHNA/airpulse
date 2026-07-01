@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import mqtt from 'mqtt'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { RefreshCw, MapPin } from 'lucide-react'
 import AppShell from '../components/AppShell'
@@ -57,22 +58,56 @@ export default function UserDashboard({ profile, health, onSignOut }) {
   const [reading,  setReading]  = useState(null)
   const [readings, setReadings] = useState([])
   const [loading,  setLoading]  = useState(true)
+  const [live,     setLive]     = useState(false)
+  const clientRef = useRef(null)
+  const locationRef = useRef({})
 
-  const load = useCallback(async () => {
+  const loadHistory = useCallback(async () => {
     try {
       const [nodes, hist] = await Promise.all([api.latestAll(), api.nodeReadings(profile.node_id)])
       const mine = (nodes||[]).find(n => n.node_id === profile.node_id)
-      setReading(mine || null)
+      if (mine) {
+        locationRef.current = { location: mine.location, district: mine.district }
+        setReading(prev => prev ? { ...prev, ...locationRef.current } : mine)
+      }
       setReadings((hist||[]).slice(0,24).reverse())
     } catch {}
     setLoading(false)
   }, [profile.node_id])
 
+  // Initial load + history refresh every 5 minutes
   useEffect(() => {
-    load()
-    const id = setInterval(load, 30000)
+    loadHistory()
+    const id = setInterval(loadHistory, 300000)
     return () => clearInterval(id)
-  }, [load])
+  }, [loadHistory])
+
+  // MQTT WebSocket — real-time readings from IoT Core
+  useEffect(() => {
+    let client
+    api.getIotUrl().then(({ url }) => {
+      client = mqtt.connect(url, { clientId: `web-${profile.user_id}-${Date.now()}` })
+      clientRef.current = client
+
+      client.on('connect', () => {
+        client.subscribe(`airpulse/readings/${profile.node_id}`)
+        setLive(true)
+      })
+
+      client.on('message', (topic, message) => {
+        try {
+          const data = JSON.parse(message.toString())
+          setReading(prev => ({ ...locationRef.current, ...prev, ...data }))
+          setLoading(false)
+        } catch {}
+      })
+
+      client.on('error', () => setLive(false))
+      client.on('close', () => setLive(false))
+    }).catch(() => {})
+
+    return () => { client?.end(true); setLive(false) }
+  }, [profile.node_id, profile.user_id])
 
 
   const aqi      = reading?.aqi || 0
@@ -101,9 +136,15 @@ export default function UserDashboard({ profile, health, onSignOut }) {
               {profile.full_name?.split(' ')[0]}'s Dashboard
             </h1>
           </div>
-          <button onClick={load} className="flex items-center gap-2 px-4 py-2 glass-card text-white/60 hover:text-white text-sm rounded-btn transition-all">
-            <RefreshCw size={14}/> Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs">
+              <div className={`w-2 h-2 rounded-full ${live ? 'bg-green-400 animate-pulse' : 'bg-white/20'}`}/>
+              <span className={live ? 'text-green-400' : 'text-white/30'}>{live ? 'Live' : 'Offline'}</span>
+            </div>
+            <button onClick={loadHistory} className="flex items-center gap-2 px-4 py-2 glass-card text-white/60 hover:text-white text-sm rounded-btn transition-all">
+              <RefreshCw size={14}/> Refresh
+            </button>
+          </div>
         </div>
 
         {/* Location bar */}

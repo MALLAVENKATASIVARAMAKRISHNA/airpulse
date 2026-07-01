@@ -62,5 +62,8 @@ export const api = {
   simOverride: (node_id, val) => req('POST', '/api/simulation/override', { node_id, ...val }),
   simReset:    (node_id)      => req('POST', '/api/simulation/reset',    { node_id }),
 
+  // IoT
+  getIotUrl: () => req('GET', '/api/iot/url'),
+
   getToken, setToken, clearToken, getUser, setUser, clearUser,
 }
