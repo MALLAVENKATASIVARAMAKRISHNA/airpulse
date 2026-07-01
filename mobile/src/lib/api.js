@@ -27,6 +27,7 @@ export const api = {
   savePushToken:(token)           => req('POST', '/api/auth/push-token', { token }),
   nodes:        ()                => req('GET',  '/api/nodes/'),
   latestAll:    ()                => req('GET',  '/api/nodes/latest'),
+  getIotUrl:    ()                => req('GET',  '/api/iot/url'),
   nodeReadings: (nodeId)          => req('GET',  `/api/nodes/${nodeId}/readings`),
   predictions:  (nodeId)          => req('GET',  `/api/ml/predictions/${nodeId}`),
   hotspots:     ()                => req('GET',  '/api/ml/hotspots'),

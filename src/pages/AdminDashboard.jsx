@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import mqtt from 'mqtt'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Activity, Check, MapPin, Pause, Play, Plus, RefreshCw, Search, Shield, Users, Zap, Globe } from 'lucide-react'
 import AppShell from '../components/AppShell'
@@ -31,6 +32,7 @@ export default function AdminDashboard({ profile, onSignOut }) {
   const [overrides, setOverrides] = useState({})
   const [loading,   setLoading]   = useState(true)
   const [search,    setSearch]    = useState('')
+  const [live,      setLive]      = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -52,6 +54,24 @@ export default function AdminDashboard({ profile, onSignOut }) {
     const id = setInterval(load, 15000)
     return () => clearInterval(id)
   }, [load])
+
+  // MQTT — real-time updates from IoT Core for all nodes
+  useEffect(() => {
+    let client
+    api.getIotUrl().then(({ url }) => {
+      client = mqtt.connect(url, { clientId: `admin-${Date.now()}` })
+      client.on('connect', () => { client.subscribe('airpulse/readings/#'); setLive(true) })
+      client.on('message', (_, message) => {
+        try {
+          const data = JSON.parse(message.toString())
+          setNodes(prev => prev.map(n => n.node_id === data.node_id ? { ...n, ...data } : n))
+        } catch {}
+      })
+      client.on('error', () => setLive(false))
+      client.on('close', () => setLive(false))
+    }).catch(() => {})
+    return () => { client?.end(true); setLive(false) }
+  }, [])
 
   useEffect(() => { if (tab==='users') loadUsers() }, [tab, loadUsers])
 
@@ -99,7 +119,12 @@ export default function AdminDashboard({ profile, onSignOut }) {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-orange-400 uppercase tracking-widest font-semibold">Administration</p>
-            <h1 className="text-2xl font-black text-white mt-1">System Overview</h1>
+            <h1 className="text-2xl font-black text-white mt-1 flex items-center gap-3">System Overview
+              <span className="flex items-center gap-1.5 text-xs font-normal">
+                <span className={`w-2 h-2 rounded-full ${live ? 'bg-green-400 animate-pulse' : 'bg-white/20'}`}/>
+                <span className={live ? 'text-green-400' : 'text-white/30'}>{live ? 'Live' : 'Polling'}</span>
+              </span>
+            </h1>
           </div>
           <button onClick={load} className="flex items-center gap-2 px-4 py-2 glass-card text-white/60 hover:text-white text-sm rounded-btn transition-all">
             <RefreshCw size={14}/> Refresh
