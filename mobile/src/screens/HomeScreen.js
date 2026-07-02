@@ -12,37 +12,25 @@ function formatTime(ts) {
 }
 
 export default function HomeScreen() {
-  const { reading, health, loading, refresh, user } = useAir()
-  const [refreshing,   setRefreshing]   = React.useState(false)
-  const [predictions,  setPredictions]  = React.useState([])
-  const [healthRisk,   setHealthRisk]   = React.useState(null)
+  const { reading, health, loading, refresh, user, predictions: mlPredictions, live } = useAir()
+  const [refreshing, setRefreshing] = React.useState(false)
+  const [healthRisk, setHealthRisk] = React.useState(null)
 
-  React.useEffect(() => {
-    if (!user?.node_id) return
-    api.predictions(user.node_id).then(setPredictions).catch(() => {})
-  }, [user?.node_id, reading?.reading_id])
+  // predictions come from IoT ML topic via AirContext
+  const p6  = mlPredictions?.['6h']  ?? reading?.aqi ?? 0
+  const p24 = mlPredictions?.['24h'] ?? reading?.aqi ?? 0
+  const p48 = mlPredictions?.['48h'] ?? reading?.aqi ?? 0
+  const hasPredictions = !!mlPredictions?.['6h']
 
   React.useEffect(() => {
     if (!reading?.aqi) return
-    const p6  = predictions.find(x => x.horizon === '6h')?.predicted_aqi  ?? reading.aqi
-    const p24 = predictions.find(x => x.horizon === '24h')?.predicted_aqi ?? reading.aqi
-    const p48 = predictions.find(x => x.horizon === '48h')?.predicted_aqi ?? reading.aqi
     api.healthRisk({ current_aqi: reading.aqi, future6: p6, future24: p24, future48: p48 })
       .then(setHealthRisk).catch(() => {})
-  }, [reading?.aqi, predictions])
+  }, [reading?.aqi, p6, p24, p48])
 
   async function onRefresh() {
     setRefreshing(true)
     await refresh()
-    if (user?.node_id) {
-      const preds = await api.predictions(user.node_id).catch(() => [])
-      setPredictions(preds)
-      const p6  = preds.find(x => x.horizon === '6h')?.predicted_aqi  ?? reading?.aqi ?? 0
-      const p24 = preds.find(x => x.horizon === '24h')?.predicted_aqi ?? reading?.aqi ?? 0
-      const p48 = preds.find(x => x.horizon === '48h')?.predicted_aqi ?? reading?.aqi ?? 0
-      api.healthRisk({ current_aqi: reading?.aqi ?? 0, future6: p6, future24: p24, future48: p48 })
-        .then(setHealthRisk).catch(() => {})
-    }
     setRefreshing(false)
   }
 
@@ -85,20 +73,20 @@ export default function HomeScreen() {
       </View>
 
       {/* AQI Forecast */}
-      {predictions.length > 0 && (
+      {hasPredictions && (
         <View style={styles.forecastCard}>
-          <Text style={styles.forecastTitle}>AQI Forecast</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Text style={styles.forecastTitle}>AQI Forecast</Text>
+            {live && <Text style={{ fontSize: 10, color: '#10d343', fontWeight: '700' }}>⚡ Live</Text>}
+          </View>
           <View style={styles.forecastRow}>
-            {['6h', '24h', '48h'].map(h => {
-              const p    = predictions.find(x => x.horizon === h)
-              const fMeta = p ? getAqiMeta(p.predicted_aqi) : null
+            {[['6h', p6], ['24h', p24], ['48h', p48]].map(([h, val]) => {
+              const fMeta = getAqiMeta(val)
               return (
-                <View key={h} style={[styles.forecastChip, fMeta && { borderColor: fMeta.color }]}>
+                <View key={h} style={[styles.forecastChip, { borderColor: fMeta.color }]}>
                   <Text style={styles.forecastHorizon}>{h}</Text>
-                  <Text style={[styles.forecastAqi, fMeta && { color: fMeta.color }]}>
-                    {p ? p.predicted_aqi : '—'}
-                  </Text>
-                  {fMeta && <Text style={[styles.forecastLabel, { color: fMeta.color }]}>{fMeta.label}</Text>}
+                  <Text style={[styles.forecastAqi, { color: fMeta.color }]}>{val}</Text>
+                  <Text style={[styles.forecastLabel, { color: fMeta.color }]}>{fMeta.label}</Text>
                 </View>
               )
             })}

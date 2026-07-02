@@ -7,6 +7,7 @@ _scaler = None
 _conn   = None
 
 S3     = boto3.client('s3', region_name='ap-south-1')
+IOT    = boto3.client('iot-data', region_name='ap-south-1')
 BUCKET = os.environ['S3_BUCKET']
 
 NODE_ENC = {'NODE001':0,'NODE002':1,'NODE003':2,'NODE004':3,'NODE005':4}
@@ -221,6 +222,26 @@ def lambda_handler(event, context):
     # Push notifications
     location = LOCATIONS.get(node_id, node_id)
     notify(node_id, event['aqi'], location)
+
+    # Publish ML results to IoT Core → dashboard receives via WebSocket
+    ml_payload = {
+        'node_id':    node_id,
+        'is_anomaly': is_anomaly,
+        'predictions': {
+            '6h':  preds['6h'],
+            '24h': preds['24h'],
+            '48h': preds['48h'],
+        },
+        'dominant_pollutant': dominant,
+    }
+    try:
+        IOT.publish(
+            topic=f'airpulse/ml/{node_id}',
+            qos=0,
+            payload=json.dumps(ml_payload),
+        )
+    except Exception as e:
+        print(f'IoT ML publish error: {e}')
 
     print(f"[{node_id}] AQI={event['aqi']} anomaly={is_anomaly} preds={preds}")
     return {'statusCode':200,'body':json.dumps({'reading_id':reading_id,'predictions':preds,'is_anomaly':is_anomaly})}

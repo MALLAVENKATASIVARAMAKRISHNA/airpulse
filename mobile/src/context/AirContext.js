@@ -5,27 +5,24 @@ import { api } from '../lib/api'
 const AirContext = createContext(null)
 
 export function AirProvider({ user, children }) {
-  const [reading,  setReading]  = useState(null)
-  const [allNodes, setAllNodes] = useState([])
-  const [health,   setHealth]   = useState(null)
-  const [loading,  setLoading]  = useState(true)
-  const [live,     setLive]     = useState(false)
+  const [reading,     setReading]     = useState(null)
+  const [allNodes,    setAllNodes]    = useState([])
+  const [health,      setHealth]      = useState(null)
+  const [predictions, setPredictions] = useState({})
+  const [isAnomaly,   setIsAnomaly]   = useState(false)
+  const [loading,     setLoading]     = useState(true)
+  const [live,        setLive]        = useState(false)
   const healthLoaded = useRef(false)
-  const nodesRef     = useRef([])
 
   const load = useCallback(async () => {
     try {
       const tasks = [api.latestAll()]
       if (!healthLoaded.current) tasks.push(api.getHealth().catch(() => null))
-
-      const results = await Promise.all(tasks)
-      const nodes   = results[0] || []
+      const results  = await Promise.all(tasks)
+      const nodes    = results[0] || []
       const userNode = nodes.find(n => n.node_id === user.node_id) || nodes[0] || null
-
-      nodesRef.current = nodes
       setAllNodes(nodes)
       setReading(userNode)
-
       if (!healthLoaded.current && results[1] !== undefined) {
         setHealth(results[1])
         healthLoaded.current = true
@@ -41,7 +38,7 @@ export function AirProvider({ user, children }) {
     return () => clearInterval(id)
   }, [load])
 
-  // MQTT WebSocket — real-time updates from IoT Core
+  // MQTT — real-time sensor data + ML predictions from IoT Core
   useEffect(() => {
     let client
     api.getIotUrl().then(({ url }) => {
@@ -52,20 +49,24 @@ export function AirProvider({ user, children }) {
 
       client.on('connect', () => {
         client.subscribe('airpulse/readings/#')
+        client.subscribe('airpulse/ml/#')
         setLive(true)
         setLoading(false)
       })
 
-      client.on('message', (_, message) => {
+      client.on('message', (topic, message) => {
         try {
           const data = JSON.parse(message.toString())
-          setAllNodes(prev => {
-            const updated = prev.map(n => n.node_id === data.node_id ? { ...n, ...data } : n)
-            nodesRef.current = updated
-            return updated
-          })
-          if (data.node_id === user.node_id) {
-            setReading(prev => ({ ...prev, ...data }))
+          if (topic.startsWith('airpulse/ml/')) {
+            if (data.node_id === user.node_id) {
+              setPredictions(data.predictions || {})
+              setIsAnomaly(data.is_anomaly || false)
+            }
+          } else {
+            setAllNodes(prev => prev.map(n => n.node_id === data.node_id ? { ...n, ...data } : n))
+            if (data.node_id === user.node_id) {
+              setReading(prev => ({ ...prev, ...data }))
+            }
           }
         } catch {}
       })
@@ -78,7 +79,7 @@ export function AirProvider({ user, children }) {
   }, [user.node_id, user.user_id])
 
   return (
-    <AirContext.Provider value={{ reading, allNodes, health, loading, live, refresh: load, user }}>
+    <AirContext.Provider value={{ reading, allNodes, health, predictions, isAnomaly, loading, live, refresh: load, user }}>
       {children}
     </AirContext.Provider>
   )

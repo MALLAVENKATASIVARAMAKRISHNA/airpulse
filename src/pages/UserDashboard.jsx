@@ -82,7 +82,9 @@ export default function UserDashboard({ profile, health, onSignOut }) {
     return () => clearInterval(id)
   }, [loadHistory])
 
-  // MQTT WebSocket — real-time readings from IoT Core
+  const [mlData, setMlData] = useState(null)
+
+  // MQTT WebSocket — real-time readings + ML results from IoT Core
   useEffect(() => {
     let client
     api.getIotUrl().then(({ url }) => {
@@ -91,14 +93,19 @@ export default function UserDashboard({ profile, health, onSignOut }) {
 
       client.on('connect', () => {
         client.subscribe(`airpulse/readings/${profile.node_id}`)
+        client.subscribe(`airpulse/ml/${profile.node_id}`)
         setLive(true)
       })
 
       client.on('message', (topic, message) => {
         try {
           const data = JSON.parse(message.toString())
-          setReading(prev => ({ ...locationRef.current, ...prev, ...data }))
-          setLoading(false)
+          if (topic.startsWith('airpulse/ml/')) {
+            setMlData(data)
+          } else {
+            setReading(prev => ({ ...locationRef.current, ...prev, ...data }))
+            setLoading(false)
+          }
         } catch {}
       })
 
@@ -117,7 +124,7 @@ export default function UserDashboard({ profile, health, onSignOut }) {
   const chartData = readings.map(r => ({ time: formatTime(r.recorded_at), aqi: r.aqi||0 }))
 
   const renderContent = () => {
-    if (tab === 'forecast')        return <ForecastPage profile={profile} />
+    if (tab === 'forecast')        return <ForecastPage profile={profile} currentAqi={aqi} mlData={mlData} />
     if (tab === 'hotspot')         return <HotspotPage profile={profile} />
     if (tab === 'health')          return <HealthAssessmentPage profile={profile} health={health} />
     if (tab === 'recommendations') return <RecommendationsPage profile={profile} health={health} />
