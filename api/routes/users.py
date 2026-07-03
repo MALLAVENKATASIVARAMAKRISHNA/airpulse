@@ -25,5 +25,5 @@ def get_user_count(current_user=Depends(admin_only)):
 def update_user_role(user_id: int, role: str = Body(..., embed=True), current_user=Depends(admin_only)):
     if role not in ('user', 'authority'):
         raise HTTPException(status_code=400, detail='Role must be user or authority')
-    query("UPDATE users SET role = %s WHERE user_id = %s AND role != 'admin'", (role, user_id))
+    query("UPDATE users SET role = %s WHERE user_id = %s AND role != 'admin'", (role, user_id), fetch='none')
     return {'ok': True}
