@@ -368,10 +368,10 @@ function PollutantsView({ reading, loading, onRefresh }) {
       {reading && (
         <div className="glass-card p-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex-1">
-            <h3 className="text-xs text-white/40 uppercase tracking-wide mb-2">Pollutant AQI Share</h3>
-            <h2 className="text-lg font-black text-white">Composition Breakdown</h2>
+            <h3 className="text-xs text-white/40 uppercase tracking-wide mb-2">Pollutant Mass Share</h3>
+            <h2 className="text-lg font-black text-white">Concentration Breakdown</h2>
             <p className="text-xs text-white/40 mt-1.5 leading-relaxed">
-              This breakdown illustrates the proportional weight (Sub-AQI score) of each key pollutant. The pollutant with the highest Sub-AQI determines the overall Air Quality Index (AQI) value.
+              This breakdown illustrates the proportional mass concentrations of key pollutants currently measured in your local atmosphere.
             </p>
           </div>
           <div className="flex items-center justify-between gap-4 flex-shrink-0">
@@ -379,9 +379,9 @@ function PollutantsView({ reading, loading, onRefresh }) {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={POLLUTANTS.map(({ label, subAqiKey, color }) => ({
+                    data={POLLUTANTS.map(({ label, key, color }) => ({
                       name: label,
-                      value: reading?.[subAqiKey] || 0,
+                      value: reading?.[key] || 0,
                       color: color
                     })).filter(x => x.value > 0)}
                     cx="50%"
@@ -391,8 +391,8 @@ function PollutantsView({ reading, loading, onRefresh }) {
                     paddingAngle={3}
                     dataKey="value"
                   >
-                    {POLLUTANTS.map(({ label, subAqiKey, color }) => {
-                      const val = reading?.[subAqiKey] || 0
+                    {POLLUTANTS.map(({ label, key, color }) => {
+                      const val = reading?.[key] || 0
                       if (val === 0) return null
                       return <Cell key={label} fill={color} />
                     })}
@@ -401,15 +401,15 @@ function PollutantsView({ reading, loading, onRefresh }) {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex flex-col gap-1.5 pl-2 min-w-[100px]">
-              {POLLUTANTS.map(({ label, subAqiKey, color }) => {
-                const val = reading?.[subAqiKey] || 0
+            <div className="flex flex-col gap-1.5 pl-2 min-w-[120px]">
+              {POLLUTANTS.map(({ label, key, unit, color }) => {
+                const val = reading?.[key] || 0
                 if (val === 0) return null
                 return (
                   <div key={label} className="flex items-center gap-1.5 text-[10px]">
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
                     <span className="text-white/60 font-semibold truncate">{label}:</span>
-                    <span className="text-white/80 font-bold">{val}</span>
+                    <span className="text-white/80 font-bold">{val.toFixed(1)} {unit}</span>
                   </div>
                 )
               })}
