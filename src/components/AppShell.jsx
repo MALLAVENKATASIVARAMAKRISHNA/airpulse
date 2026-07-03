@@ -31,13 +31,13 @@ export default function AppShell({ role, onSignOut, activeTab, onTabChange, chil
   const nav = role === 'admin' ? ADMIN_NAV : role === 'authority' ? AUTHORITY_NAV : USER_NAV
 
   return (
-    <div className="flex min-h-screen bg-darkBg text-white">
+    <div className="flex h-screen bg-darkBg text-white overflow-hidden">
       {/* Ambient glows */}
       <div className="mesh-glow-blue" />
       <div className="mesh-glow-green" />
 
       {/* Sidebar */}
-      <aside className="relative z-10 flex flex-col w-60 min-h-screen border-r border-white/[0.06] bg-white/[0.02] flex-shrink-0">
+      <aside className="relative z-10 flex flex-col w-60 h-full border-r border-white/[0.06] bg-white/[0.02] flex-shrink-0">
         <div className="px-5 py-6 border-b border-white/[0.06]">
           <Logo />
         </div>
@@ -82,7 +82,7 @@ export default function AppShell({ role, onSignOut, activeTab, onTabChange, chil
       </aside>
 
       {/* Main content */}
-      <main className="relative z-10 flex-1 overflow-y-auto">
+      <main className="relative z-10 flex-1 h-full overflow-y-auto">
         {children}
       </main>
     </div>
