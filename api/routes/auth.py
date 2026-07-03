@@ -69,6 +69,28 @@ def me(current_user=Depends(get_current_user)):
         raise HTTPException(404, 'User not found.')
     return dict(user)
 
+class UpdateProfileRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    node_id: str
+
+@router.put('/profile')
+def update_profile(data: UpdateProfileRequest, current_user=Depends(get_current_user)):
+    node = query('SELECT location FROM nodes WHERE node_id = %s', (data.node_id,), fetch='one')
+    if not node:
+        raise HTTPException(400, 'Invalid monitoring location.')
+    existing = query('SELECT user_id FROM users WHERE email = %s AND user_id != %s', 
+                     (data.email, current_user['user_id']), fetch='one')
+    if existing:
+        raise HTTPException(400, 'An account with this email already exists.')
+    user = query("""
+        UPDATE users
+        SET full_name = %s, email = %s, node_id = %s, location = %s
+        WHERE user_id = %s
+        RETURNING user_id, full_name, email, node_id, location, role
+    """, (data.full_name, data.email, data.node_id, node['location'], current_user['user_id']), fetch='one')
+    return {'ok': True, 'token': build_token(user), 'user': dict(user)}
+
 @router.post('/setup')
 def setup_admin(data: SetupRequest):
     existing_admin = query("SELECT user_id FROM users WHERE role = 'admin'", fetch='one')

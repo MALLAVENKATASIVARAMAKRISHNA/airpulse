@@ -27,6 +27,7 @@ export const api = {
   login:      (email, password) => req('POST', '/api/auth/login', { email, password }),
   signup:     (data)            => req('POST', '/api/auth/signup', data),
   me:         ()                => req('GET',  '/api/auth/me'),
+  updateProfile: (data)         => req('PUT',  '/api/auth/profile', data),
 
   // Health
   conditions: ()     => req('GET',  '/api/auth/conditions'),

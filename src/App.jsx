@@ -41,6 +41,16 @@ export default function App() {
     loadHealth(u)
   }
 
+  const handleReloadUser = useCallback(async () => {
+    try {
+      const [u, h, c] = await Promise.all([api.me(), api.getHealth(), api.conditions()])
+      setUser(u)
+      api.setUser(u)
+      setHealth(h)
+      setConditions(c)
+    } catch (_) {}
+  }, [])
+
   function signOut() {
     api.clearToken()
     api.clearUser()
@@ -63,5 +73,5 @@ export default function App() {
       setHealth(h); setConditions(c)
     }} />
 
-  return <UserDashboard profile={user} health={health} onSignOut={signOut} />
+  return <UserDashboard profile={user} health={health} onSignOut={signOut} onReloadUser={handleReloadUser} />
 }

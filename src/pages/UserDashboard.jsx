@@ -9,6 +9,7 @@ import HealthAssessmentPage from './HealthAssessmentPage'
 import RecommendationsPage from './RecommendationsPage'
 import SourceAnalysisPage from './SourceAnalysisPage'
 import AlertCenterPage from './AlertCenterPage'
+import SettingsPage from './SettingsPage'
 import { api } from '../lib/api'
 
 function aqiMeta(aqi) {
@@ -53,7 +54,7 @@ function formatTime(ts) {
   return new Date(t).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
 }
 
-export default function UserDashboard({ profile, health, onSignOut }) {
+export default function UserDashboard({ profile, health, onSignOut, onReloadUser }) {
   const [tab,      setTab]      = useState('overview')
   const [reading,  setReading]  = useState(null)
   const [readings, setReadings] = useState([])
@@ -130,6 +131,7 @@ export default function UserDashboard({ profile, health, onSignOut }) {
     if (tab === 'recommendations') return <RecommendationsPage profile={profile} health={health} />
     if (tab === 'sources')         return <SourceAnalysisPage profile={profile} />
     if (tab === 'alerts')          return <AlertCenterPage profile={profile} />
+    if (tab === 'settings')        return <SettingsPage profile={profile} health={health} onReloadUser={onReloadUser} />
     if (tab === 'air')             return <PollutantsView reading={reading} loading={loading} onRefresh={loadHistory} />
 
     // Overview

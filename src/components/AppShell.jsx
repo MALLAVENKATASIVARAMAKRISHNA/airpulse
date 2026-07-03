@@ -1,4 +1,4 @@
-import { Activity, Bell, BarChart2, Brain, Globe, Heart, LogOut, MapPin, Play, ShieldCheck, TrendingUp, Users, Wind, Zap } from 'lucide-react'
+import { Activity, Bell, BarChart2, Brain, Globe, Heart, LogOut, MapPin, Play, ShieldCheck, Settings, TrendingUp, Users, Wind, Zap } from 'lucide-react'
 import Logo from './Logo'
 
 const USER_NAV = [
@@ -10,6 +10,7 @@ const USER_NAV = [
   { id: 'recommendations', icon: ShieldCheck, label: 'Advice'        },
   { id: 'sources',         icon: Brain,       label: 'Sources'       },
   { id: 'alerts',          icon: Bell,        label: 'Alerts'        },
+  { id: 'settings',        icon: Settings,    label: 'Settings'      },
 ]
 
 const ADMIN_NAV = [
