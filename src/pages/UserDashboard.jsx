@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import mqtt from 'mqtt'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { RefreshCw, MapPin, Wind } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import ForecastPage from './ForecastPage'
@@ -246,15 +246,15 @@ export default function UserDashboard({ profile, health, onSignOut }) {
           {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
             const val = reading?.[key] || 0
             const subAqi = reading?.[subAqiKey] || 0
-            const pct = Math.min((subAqi / 500) * 100, 100)
+            const pct = Math.min((val / limit) * 100, 100)
             return (
               <div key={key} className="glass-card p-4 text-center group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
                 style={{ background: `radial-gradient(circle at center, ${color}08 0%, rgba(255,255,255,0.03) 100%)` }}>
                 <div className="text-xs text-white/40 mb-1 font-semibold group-hover:text-white/60 transition-colors">{label}</div>
                 <div className="text-2xl font-black mb-0.5 transition-transform group-hover:scale-105 duration-300" style={{ color }}>
-                  {subAqi}
+                  {val.toFixed(1)} <span className="text-xs text-white/40 font-medium">{unit}</span>
                 </div>
-                <div className="text-[10px] text-white/30 mb-3">{val.toFixed(1)} {unit}</div>
+                <div className="text-[10px] text-white/30 mb-3">Sub-AQI: {subAqi}</div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width:`${pct}%`, background:color }} />
                 </div>
@@ -263,26 +263,77 @@ export default function UserDashboard({ profile, health, onSignOut }) {
           })}
         </div>
 
-        {/* Trend chart */}
-        {chartData.length > 0 && (
-          <div className="glass-card p-6">
-            <p className="text-xs text-white/40 uppercase tracking-wide mb-4">AQI Trend · Last {chartData.length} readings</p>
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart data={chartData} margin={{ top:0, right:0, bottom:0, left:-20 }}>
-                <defs>
-                  <linearGradient id="aqi-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={meta.color} stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor={meta.color} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="time" tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false} interval={4}/>
-                <YAxis tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false}/>
-                <Tooltip contentStyle={{ background:'#060913', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
-                <Area type="monotone" dataKey="aqi" stroke={meta.color} strokeWidth={2} fill="url(#aqi-grad)" dot={false}/>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Trend chart */}
+          {chartData.length > 0 && (
+            <div className="glass-card p-6 flex flex-col justify-between">
+              <p className="text-xs text-white/40 uppercase tracking-wide mb-4">AQI Trend · Last {chartData.length} readings</p>
+              <ResponsiveContainer width="100%" height={160}>
+                <AreaChart data={chartData} margin={{ top:0, right:0, bottom:0, left:-20 }}>
+                  <defs>
+                    <linearGradient id="aqi-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={meta.color} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={meta.color} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="time" tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false} interval={4}/>
+                  <YAxis tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                  <Tooltip contentStyle={{ background:'#060913', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
+                  <Area type="monotone" dataKey="aqi" stroke={meta.color} strokeWidth={2} fill="url(#aqi-grad)" dot={false}/>
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Composition Pie Chart */}
+          {reading && (
+            <div className="glass-card p-6 flex flex-col justify-between">
+              <p className="text-xs text-white/40 uppercase tracking-wide mb-4">Pollutants Sub-AQI Composition</p>
+              <div className="flex items-center justify-between gap-4 flex-1">
+                <div className="w-[180px] h-[160px] flex-shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={POLLUTANTS.map(({ label, subAqiKey, color }) => ({
+                          name: label,
+                          value: reading?.[subAqiKey] || 0,
+                          color: color
+                        })).filter(x => x.value > 0)}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={35}
+                        outerRadius={55}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {POLLUTANTS.map(({ label, subAqiKey, color }) => {
+                          const val = reading?.[subAqiKey] || 0
+                          if (val === 0) return null
+                          return <Cell key={label} fill={color} />
+                        })}
+                      </Pie>
+                      <Tooltip contentStyle={{ background:'#060913', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1.5 pl-2 max-w-[200px]">
+                  {POLLUTANTS.map(({ label, subAqiKey, color }) => {
+                    const val = reading?.[subAqiKey] || 0
+                    if (val === 0) return null
+                    return (
+                      <div key={label} className="flex items-center gap-1.5 text-[10px]">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+                        <span className="text-white/60 font-semibold truncate">{label}:</span>
+                        <span className="text-white/80 font-bold">{val}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Health tip */}
         <div className="glass-card p-5" style={{ borderColor: meta.color + '25' }}>
@@ -316,25 +367,26 @@ function PollutantsView({ reading, loading, onRefresh }) {
         {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
           const val = reading?.[key] || 0
           const subAqi = reading?.[subAqiKey] || 0
-          const meta = aqiMeta(subAqi)
-          const pct = Math.min((subAqi / 500) * 100, 100)
+          const pct = Math.min((val / limit) * 100, 100)
+          const status = pct>=100?'Exceeds Limit':pct>=80?'High':pct>=50?'Moderate':'Safe'
+          const statusColor = pct>=100?'#FF0000':pct>=80?'#FF7E00':pct>=50?'#FFFF00':'#00E400'
           return (
             <div key={key} className="glass-card p-5" style={{ borderColor: color+'20' }}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-bold text-white">{label}</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color: meta.color, background: meta.bg }}>
-                  {meta.label}
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color: statusColor, background: statusColor+'15' }}>
+                  {status}
                 </span>
               </div>
-              <div className="text-3xl font-black mb-1 transition-all duration-300" style={{ color: meta.color }}>
-                {subAqi} <span className="text-xs text-white/30 font-medium">Sub-AQI</span>
+              <div className="text-3xl font-black mb-1 transition-all duration-300" style={{ color }}>
+                {val.toFixed(1)} <span className="text-xs text-white/30 font-medium">{unit}</span>
               </div>
               <div className="text-xs text-white/40 mb-3">
-                Concentration: <span className="font-semibold text-white/70">{val.toFixed(1)} {unit}</span>
+                Sub-AQI: <span className="font-semibold text-white/70">{subAqi}</span>
                 <span className="text-white/20"> / limit {limit}</span>
               </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500" style={{ width:`${pct}%`, background: meta.color }} />
+                <div className="h-full rounded-full transition-all duration-500" style={{ width:`${pct}%`, background: color }} />
               </div>
             </div>
           )
