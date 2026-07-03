@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import mqtt from 'mqtt'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { RefreshCw, MapPin } from 'lucide-react'
+import { RefreshCw, MapPin, Wind } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import ForecastPage from './ForecastPage'
 import HotspotPage from './HotspotPage'
@@ -130,7 +130,7 @@ export default function UserDashboard({ profile, health, onSignOut }) {
     if (tab === 'recommendations') return <RecommendationsPage profile={profile} health={health} />
     if (tab === 'sources')         return <SourceAnalysisPage profile={profile} />
     if (tab === 'alerts')          return <AlertCenterPage profile={profile} />
-    if (tab === 'air')             return <PollutantsView reading={reading} loading={loading} onRefresh={load} />
+    if (tab === 'air')             return <PollutantsView reading={reading} loading={loading} onRefresh={loadHistory} />
 
     // Overview
     return (
