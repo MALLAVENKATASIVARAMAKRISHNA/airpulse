@@ -27,9 +27,40 @@ function CustomTooltip({ active, payload }) {
     <div className="glass-card px-4 py-3 text-sm border border-white/10">
       <p className="text-white/50 mb-1">{label}</p>
       <p className="text-2xl font-black" style={{ color: meta.color }}>{aqi}</p>
-      <p className="text-xs font-semibold" style={{ color: meta.color }}>{meta.label}</p>
     </div>
   )
+}
+
+function formatForecastTime(horizon, predictedFor = null) {
+  let date
+  if (predictedFor) {
+    const t = /Z|[+-]\d{2}:\d{2}$/.test(predictedFor) ? predictedFor : predictedFor + 'Z'
+    date = new Date(t)
+  } else {
+    const hours = horizon === '6h' ? 6 : horizon === '24h' ? 24 : horizon === '48h' ? 48 : 0
+    date = new Date(Date.now() + hours * 60 * 60 * 1000)
+  }
+
+  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  
+  if (horizon === 'Now') {
+    return `Now (${timeStr})`
+  }
+
+  const today = new Date()
+  const isToday = date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()
+  
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+  const isTomorrow = date.getDate() === tomorrow.getDate() && date.getMonth() === tomorrow.getMonth() && date.getFullYear() === tomorrow.getFullYear()
+
+  if (isToday) {
+    return timeStr
+  } else if (isTomorrow) {
+    return `Tomorrow ${timeStr}`
+  } else {
+    const dayName = date.toLocaleDateString([], { weekday: 'short' })
+    return `${dayName} ${timeStr}`
+  }
 }
 
 export default function ForecastPage({ profile, currentAqi = 0, mlData = null }) {
@@ -53,10 +84,10 @@ export default function ForecastPage({ profile, currentAqi = 0, mlData = null })
   const maxAqi  = hasData ? Math.min(500, Math.max(currentAqi, preds['6h'], preds['24h'], preds['48h']) + 50) : 300
 
   const chartData = hasData ? [
-    { label: 'Now',  aqi: currentAqi   },
-    { label: '+6h',  aqi: preds['6h']  },
-    { label: '+24h', aqi: preds['24h'] },
-    { label: '+48h', aqi: preds['48h'] },
+    { label: formatForecastTime('Now'), aqi: currentAqi   },
+    { label: formatForecastTime('6h',  isLive ? null : dbPreds.find(x => x.horizon === '6h')?.predicted_for),  aqi: preds['6h']  },
+    { label: formatForecastTime('24h', isLive ? null : dbPreds.find(x => x.horizon === '24h')?.predicted_for), aqi: preds['24h'] },
+    { label: formatForecastTime('48h', isLive ? null : dbPreds.find(x => x.horizon === '48h')?.predicted_for), aqi: preds['48h'] },
   ] : []
 
   return (
