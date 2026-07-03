@@ -7,3 +7,10 @@ dist/
 # Project intelligence — never commit
 CLAUDE.md
 certs/
+
+# Python environment
+.venv/
+__pycache__/
+*.pkl
+*.pyc
+api/ml_models/

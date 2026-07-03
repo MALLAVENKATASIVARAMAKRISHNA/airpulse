@@ -86,9 +86,9 @@ export default function ForecastPage({ profile, currentAqi = 0, mlData = null, h
 
   const chartData = hasData ? [
     { label: formatForecastTime('Now'), aqi: currentAqi   },
-    { label: formatForecastTime('6h',  isLive ? null : dbPreds.find(x => x.horizon === '6h')?.predicted_for),  aqi: preds['6h']  },
-    { label: formatForecastTime('24h', isLive ? null : dbPreds.find(x => x.horizon === '24h')?.predicted_for), aqi: preds['24h'] },
-    { label: formatForecastTime('48h', isLive ? null : dbPreds.find(x => x.horizon === '48h')?.predicted_for), aqi: preds['48h'] },
+    { label: formatForecastTime('6h'),  aqi: preds['6h']  },
+    { label: formatForecastTime('24h'), aqi: preds['24h'] },
+    { label: formatForecastTime('48h'), aqi: preds['48h'] },
   ] : []
 
   const selectedAqi = selectedHorizon === 'Now' ? currentAqi : (preds[selectedHorizon] ?? currentAqi)
