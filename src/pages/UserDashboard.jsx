@@ -354,8 +354,8 @@ export default function UserDashboard({ profile, health, onSignOut }) {
 function PollutantsView({ reading, loading, onRefresh }) {
   if (loading) return <div className="p-8 flex items-center justify-center h-40 text-white/30">Loading…</div>
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-8 max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-black text-white flex items-center gap-2">
           <Wind size={22} className="text-brandCyan"/> Air Quality Detail
         </h1>
@@ -363,6 +363,62 @@ function PollutantsView({ reading, loading, onRefresh }) {
           <RefreshCw size={14}/> Refresh
         </button>
       </div>
+
+      {/* Composition Pie Chart */}
+      {reading && (
+        <div className="glass-card p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex-1">
+            <h3 className="text-xs text-white/40 uppercase tracking-wide mb-2">Pollutant AQI Share</h3>
+            <h2 className="text-lg font-black text-white">Composition Breakdown</h2>
+            <p className="text-xs text-white/40 mt-1.5 leading-relaxed">
+              This breakdown illustrates the proportional weight (Sub-AQI score) of each key pollutant. The pollutant with the highest Sub-AQI determines the overall Air Quality Index (AQI) value.
+            </p>
+          </div>
+          <div className="flex items-center justify-between gap-4 flex-shrink-0">
+            <div className="w-[180px] h-[150px] flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={POLLUTANTS.map(({ label, subAqiKey, color }) => ({
+                      name: label,
+                      value: reading?.[subAqiKey] || 0,
+                      color: color
+                    })).filter(x => x.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={30}
+                    outerRadius={50}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {POLLUTANTS.map(({ label, subAqiKey, color }) => {
+                      const val = reading?.[subAqiKey] || 0
+                      if (val === 0) return null
+                      return <Cell key={label} fill={color} />
+                    })}
+                  </Pie>
+                  <Tooltip contentStyle={{ background:'#060913', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-col gap-1.5 pl-2 min-w-[100px]">
+              {POLLUTANTS.map(({ label, subAqiKey, color }) => {
+                const val = reading?.[subAqiKey] || 0
+                if (val === 0) return null
+                return (
+                  <div key={label} className="flex items-center gap-1.5 text-[10px]">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+                    <span className="text-white/60 font-semibold truncate">{label}:</span>
+                    <span className="text-white/80 font-bold">{val}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pollutant Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
           const val = reading?.[key] || 0
