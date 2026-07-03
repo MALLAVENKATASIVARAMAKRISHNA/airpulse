@@ -34,6 +34,9 @@ export default function App() {
   function handleLogin(token, u) {
     api.setToken(token)
     api.setUser(u)
+    if (u.role === 'user') {
+      setLoading(true)
+    }
     setUser(u)
     loadHealth(u)
   }
