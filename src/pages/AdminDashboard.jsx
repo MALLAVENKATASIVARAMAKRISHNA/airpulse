@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import mqtt from 'mqtt'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie } from 'recharts'
 import { Activity, Check, MapPin, Pause, Play, Plus, RefreshCw, Search, Shield, Users, Zap, Globe } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { api } from '../lib/api'
@@ -15,10 +15,19 @@ function aqiMeta(aqi) {
 }
 
 const POLLUTANTS = [
-  { key:'pm25', label:'PM2.5', max:200 }, { key:'pm10', label:'PM10', max:300 },
-  { key:'co',   label:'CO',    max:30  }, { key:'no2',  label:'NO2',  max:200 },
-  { key:'ozone',label:'Ozone', max:200 }, { key:'nh3',  label:'NH3',  max:400 },
+  { key:'pm25',  subAqiKey:'sub_aqi_pm25',  label:'PM2.5', unit:'µg/m³', limit:60,  color:'#EF5350' },
+  { key:'pm10',  subAqiKey:'sub_aqi_pm10',  label:'PM10',  unit:'µg/m³', limit:100, color:'#FF7043' },
+  { key:'no2',   subAqiKey:'sub_aqi_no2',   label:'NO2',   unit:'µg/m³', limit:80,  color:'#AB47BC' },
+  { key:'ozone', subAqiKey:'sub_aqi_ozone', label:'Ozone', unit:'µg/m³', limit:100, color:'#26A69A' },
+  { key:'co',    subAqiKey:'sub_aqi_co',    label:'CO',    unit:'mg/m³',  limit:10,  color:'#FFA726' },
+  { key:'nh3',   subAqiKey:'sub_aqi_nh3',   label:'NH3',   unit:'µg/m³', limit:400, color:'#FFCA28' },
 ]
+
+function formatTime(ts) {
+  if (!ts) return '—'
+  const t = /Z|[+-]\d{2}:\d{2}$/.test(ts) ? ts : ts + 'Z'
+  return new Date(t).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
+}
 
 export default function AdminDashboard({ profile, onSignOut }) {
   const [tab,       setTab]       = useState('overview')
@@ -34,6 +43,10 @@ export default function AdminDashboard({ profile, onSignOut }) {
   const [search,    setSearch]    = useState('')
   const [live,      setLive]      = useState(false)
 
+  const [selectedNode, setSelectedNode] = useState(null)
+  const [nodeReadings, setNodeReadings] = useState([])
+  const [nodeLoading,  setNodeLoading]  = useState(false)
+
   const load = useCallback(async () => {
     try {
       const [n, uc, s, a] = await Promise.all([api.latestAll(), api.userCount(), api.simStatus(), api.anomalies()])
@@ -48,6 +61,16 @@ export default function AdminDashboard({ profile, onSignOut }) {
   const loadUsers = useCallback(async () => {
     try { setUsers(await api.users()||[]) } catch {}
   }, [])
+
+  const selectNodeDetail = async (node) => {
+    setSelectedNode(node)
+    setNodeLoading(true)
+    try {
+      const res = await api.nodeReadings(node.node_id)
+      setNodeReadings((res || []).slice(0, 24).reverse())
+    } catch {}
+    setNodeLoading(false)
+  }
 
   useEffect(() => {
     load()
@@ -65,6 +88,7 @@ export default function AdminDashboard({ profile, onSignOut }) {
         try {
           const data = JSON.parse(message.toString())
           setNodes(prev => prev.map(n => n.node_id === data.node_id ? { ...n, ...data } : n))
+          setSelectedNode(prev => prev && prev.node_id === data.node_id ? { ...prev, ...data } : prev)
         } catch {}
       })
       client.on('error', () => setLive(false))
@@ -181,38 +205,196 @@ export default function AdminDashboard({ profile, onSignOut }) {
       </div>
     )
 
-    if (tab === 'nodes') return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-black text-white mb-6 flex items-center gap-2"><Globe size={22} className="text-brandCyan"/> Monitoring Nodes</h1>
-        <div className="space-y-4">
-          {nodes.map(n=>{
-            const m=aqiMeta(n.aqi||0)
-            return (
-              <div key={n.node_id} className="glass-card p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-sm font-bold text-white">{n.location}</p>
-                    <p className="text-xs text-white/40">{n.node_id} · {n.district}, {n.state}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-black" style={{color:m.color}}>{n.aqi||0}</div>
-                    <div className="text-xs font-semibold" style={{color:m.color}}>{m.label}</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {POLLUTANTS.slice(0,6).map(({key,label,max})=>(
-                    <div key={key} className="text-xs">
-                      <span className="text-white/40">{label}: </span>
-                      <span className="text-white font-semibold">{(n[key]||0).toFixed(1)}</span>
-                    </div>
-                  ))}
+    if (tab === 'nodes') {
+      if (selectedNode) {
+        const meta = aqiMeta(selectedNode.aqi || 0)
+        const trendData = nodeReadings.map(r => ({
+          time: formatTime(r.recorded_at),
+          aqi: r.aqi || 0
+        }))
+
+        return (
+          <div className="p-8 max-w-4xl mx-auto space-y-6">
+            {/* Header / Back */}
+            <div className="flex items-center justify-between">
+              <button onClick={() => { setSelectedNode(null); setNodeReadings([]) }}
+                className="text-xs text-brandCyan hover:text-white flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-btn transition-all">
+                ← Back to Nodes List
+              </button>
+              <h2 className="text-sm font-bold text-white/55">{selectedNode.node_id} Details</h2>
+            </div>
+
+            {/* Title / Summary */}
+            <div className="glass-card p-6 flex flex-col md:flex-row items-center gap-6"
+              style={{ background: `radial-gradient(circle at center, ${meta.color}08 0%, rgba(255,255,255,0.03) 100%)` }}>
+              <div className="flex-1">
+                <h1 className="text-2xl font-black text-white">{selectedNode.location}</h1>
+                <p className="text-xs text-white/40 mt-1">{selectedNode.district}, {selectedNode.state}</p>
+                <div className="mt-4 p-3 bg-white/5 border border-white/5 rounded-btn inline-block">
+                  <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider block">Cause of Pollution</span>
+                  <span className="text-xs text-white/80 font-medium">
+                    {selectedNode.cause || 'Automobile emissions & industrial output'}
+                  </span>
                 </div>
               </div>
-            )
-          })}
+
+              {/* Gauge */}
+              <div className="text-center md:text-right flex-shrink-0">
+                <div className="text-5xl font-black mb-1" style={{ color: meta.color }}>
+                  {selectedNode.aqi || 0}
+                </div>
+                <div className="text-sm font-semibold uppercase tracking-wide" style={{ color: meta.color }}>
+                  {meta.label}
+                </div>
+                <span className="text-[10px] text-white/30 block mt-1">CPCB Indian AQI Index</span>
+              </div>
+            </div>
+
+            {nodeLoading && nodeReadings.length === 0 ? (
+              <div className="text-center text-white/30 py-10">Loading node metrics…</div>
+            ) : (
+              <>
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Trend chart */}
+                  {trendData.length > 0 && (
+                    <div className="glass-card p-5 flex flex-col justify-between">
+                      <p className="text-xs text-white/40 uppercase tracking-wide mb-4">24h AQI Trend</p>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <AreaChart data={trendData} margin={{ top:0, right:0, bottom:0, left:-20 }}>
+                          <defs>
+                            <linearGradient id="node-aqi-grad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={meta.color} stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor={meta.color} stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="time" tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false} interval={4}/>
+                          <YAxis tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                          <Tooltip contentStyle={{ background:'#060913', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
+                          <Area type="monotone" dataKey="aqi" stroke={meta.color} strokeWidth={2} fill="url(#node-aqi-grad)" dot={false}/>
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+
+                  {/* Composition Pie Chart */}
+                  <div className="glass-card p-5 flex flex-col justify-between">
+                    <p className="text-xs text-white/40 uppercase tracking-wide mb-4">Pollutant Mass Share</p>
+                    <div className="flex items-center justify-between gap-4 flex-1">
+                      <div className="w-[180px] h-[150px] flex-shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={POLLUTANTS.map(({ label, key, color }) => ({
+                                name: label,
+                                value: selectedNode?.[key] || 0,
+                                color: color
+                              })).filter(x => x.value > 0)}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={30}
+                              outerRadius={50}
+                              paddingAngle={3}
+                              dataKey="value"
+                            >
+                              {POLLUTANTS.map(({ label, key, color }) => {
+                                const val = selectedNode?.[key] || 0
+                                if (val === 0) return null
+                                return <Cell key={label} fill={color} />
+                              })}
+                            </Pie>
+                            <Tooltip contentStyle={{ background:'#060913', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="flex-1 grid grid-cols-2 gap-x-2 gap-y-1.5 pl-2 max-w-[200px]">
+                        {POLLUTANTS.map(({ label, key, unit, color }) => {
+                          const val = selectedNode?.[key] || 0
+                          if (val === 0) return null
+                          return (
+                            <div key={label} className="flex items-center gap-1.5 text-[10px]">
+                              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                              <span className="text-white/60 font-semibold truncate">{label}:</span>
+                              <span className="text-white/80 font-bold truncate">{val.toFixed(1)} {unit}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detailed metrics grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
+                    const val = selectedNode?.[key] || 0
+                    const subAqi = selectedNode?.[subAqiKey] || 0
+                    const valPct = Math.min((val / limit) * 100, 100)
+                    const status = valPct>=100?'Exceeds Limit':valPct>=80?'High':valPct>=50?'Moderate':'Safe'
+                    const statusColor = valPct>=100?'#FF0000':valPct>=80?'#FF7E00':valPct>=50?'#FFFF00':'#00E400'
+                    return (
+                      <div key={key} className="glass-card p-5" style={{ borderColor: color+'20' }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-bold text-white">{label}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color: statusColor, background: statusColor+'15' }}>
+                            {status}
+                          </span>
+                        </div>
+                        <div className="text-3xl font-black mb-1" style={{ color }}>
+                          {val.toFixed(1)} <span className="text-xs text-white/30 font-medium">{unit}</span>
+                        </div>
+                        <div className="text-xs text-white/40 mb-3">
+                          Sub-AQI: <span className="font-semibold text-white/70">{subAqi}</span>
+                          <span className="text-white/20"> / limit {limit}</span>
+                        </div>
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width:`${valPct}%`, background: color }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )
+      }
+
+      return (
+        <div className="p-8 max-w-4xl mx-auto">
+          <h1 className="text-2xl font-black text-white mb-6 flex items-center gap-2"><Globe size={22} className="text-brandCyan"/> Monitoring Nodes</h1>
+          <div className="space-y-4">
+            {nodes.map(n=>{
+              const m=aqiMeta(n.aqi||0)
+              return (
+                <div key={n.node_id} onClick={() => selectNodeDetail(n)}
+                  className="glass-card p-5 cursor-pointer hover:border-brandCyan/40 active:scale-[0.99] transition-all duration-300">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-bold text-white">{n.location}</p>
+                      <p className="text-xs text-white/40">{n.node_id} · {n.district}, {n.state}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-black" style={{color:m.color}}>{n.aqi||0}</div>
+                      <div className="text-xs font-semibold" style={{color:m.color}}>{m.label}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {POLLUTANTS.map(({key,label,unit})=>(
+                      <div key={key} className="text-xs">
+                        <span className="text-white/40">{label}: </span>
+                        <span className="text-white font-semibold">{(n[key]||0).toFixed(1)} <span className="text-[10px] text-white/30">{unit}</span></span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-brandCyan/50 mt-3 font-semibold text-right">💡 Click to view detailed analysis →</p>
+                </div>
+              )
+            })}
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
 
     if (tab === 'users') return (
       <div className="p-8 max-w-4xl mx-auto">
