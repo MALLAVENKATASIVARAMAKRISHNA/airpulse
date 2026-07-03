@@ -124,7 +124,7 @@ export default function UserDashboard({ profile, health, onSignOut }) {
   const chartData = readings.map(r => ({ time: formatTime(r.recorded_at), aqi: r.aqi||0 }))
 
   const renderContent = () => {
-    if (tab === 'forecast')        return <ForecastPage profile={profile} currentAqi={aqi} mlData={mlData} />
+    if (tab === 'forecast')        return <ForecastPage profile={profile} currentAqi={aqi} mlData={mlData} health={health} />
     if (tab === 'hotspot')         return <HotspotPage profile={profile} />
     if (tab === 'health')          return <HealthAssessmentPage profile={profile} health={health} />
     if (tab === 'recommendations') return <RecommendationsPage profile={profile} health={health} />
@@ -173,21 +173,65 @@ export default function UserDashboard({ profile, health, onSignOut }) {
         )}
 
         {/* AQI Hero */}
-        <div className="glass-card p-8 flex flex-col items-center text-center" style={{ borderColor: meta.color + '30' }}>
-          <p className="text-xs text-white/40 uppercase tracking-widest mb-4">Air Quality Index</p>
-          <div className="relative mb-4">
-            <div className="text-8xl font-black" style={{ color: meta.color }}>{aqi}</div>
-            <div className="absolute -right-6 top-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: meta.bg, color: meta.color }}>{meta.label}</div>
+        <div className="glass-card p-8 flex flex-col items-center text-center hover:shadow-[0_0_30px_rgba(0,106,255,0.08)] transition-all duration-500" style={{ borderColor: meta.color + '25' }}>
+          <p className="text-xs text-white/40 uppercase tracking-widest mb-6">Air Quality Index</p>
+          
+          <div className="relative w-48 h-48 flex items-center justify-center mb-6">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <defs>
+                <linearGradient id="aqi-hero-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={meta.color} />
+                  <stop offset="100%" stopColor={meta.color} stopOpacity={0.4} />
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              {/* Background circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.04)"
+                strokeWidth="8"
+              />
+              {/* Foreground circle with dynamic fill */}
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke="url(#aqi-hero-glow)"
+                strokeWidth="8"
+                strokeDasharray="251.2"
+                strokeDashoffset={251.2 - (251.2 * Math.min(aqi, 500)) / 500}
+                strokeLinecap="round"
+                filter="url(#glow)"
+                style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-6xl font-black tracking-tighter" style={{ color: meta.color }}>
+                {aqi}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30 mt-1">
+                AQI Index
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full mt-2" style={{ background: meta.bg, color: meta.color }}>
+                {meta.label}
+              </span>
+            </div>
           </div>
-          <div className="w-full h-3 rounded-full bg-gradient-to-r from-[#00E400] via-[#FFFF00] via-[#FF7E00] to-[#8F3F97] relative mb-2">
-            <div className="absolute -top-1 w-5 h-5 rounded-full bg-white border-2 border-darkBg shadow-lg transition-all"
-              style={{ left: `${Math.min(aqi/500*100,98)}%`, transform:'translateX(-50%)' }} />
-          </div>
-          <div className="flex justify-between w-full text-[10px] text-white/30 mt-1">
-            <span>0</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500</span>
-          </div>
+
           {reading?.dominant_pollutant && (
-            <p className="mt-4 text-sm text-white/50">Dominant: <span className="font-bold" style={{ color: meta.color }}>{reading.dominant_pollutant}</span></p>
+            <p className="text-sm text-white/50">
+              Dominant Pollutant: <span className="font-bold" style={{ color: meta.color }}>{reading.dominant_pollutant}</span>
+            </p>
           )}
         </div>
 
@@ -197,12 +241,13 @@ export default function UserDashboard({ profile, health, onSignOut }) {
             const val = reading?.[key] || 0
             const pct = Math.min((val/limit)*100, 100)
             return (
-              <div key={key} className="glass-card p-4 text-center">
-                <div className="text-xs text-white/40 mb-1">{label}</div>
-                <div className="text-xl font-black mb-1" style={{ color }}>{val.toFixed(1)}</div>
-                <div className="text-[10px] text-white/30 mb-2">{unit}</div>
-                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width:`${pct}%`, background:color }} />
+              <div key={key} className="glass-card p-4 text-center group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
+                style={{ background: `radial-gradient(circle at center, ${color}08 0%, rgba(255,255,255,0.03) 100%)` }}>
+                <div className="text-xs text-white/40 mb-1 font-semibold group-hover:text-white/60 transition-colors">{label}</div>
+                <div className="text-2xl font-black mb-1 transition-transform group-hover:scale-105 duration-300" style={{ color }}>{val.toFixed(1)}</div>
+                <div className="text-[10px] text-white/30 mb-3">{unit}</div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width:`${pct}%`, background:color }} />
                 </div>
               </div>
             )
