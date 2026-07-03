@@ -2,6 +2,24 @@ import { useEffect, useState } from 'react'
 import { Settings, Save, CheckCircle, AlertTriangle, User, ShieldAlert } from 'lucide-react'
 import { api } from '../lib/api'
 
+function getWarnThreshold(cond, sev, age) {
+  const c = (cond || '').toLowerCase(), yr = parseInt(age) || 30
+  const infant = yr<=2, child=yr>=3&&yr<=12, elderly=yr>=60
+  let warn = 201
+  if (c.includes('asthma'))        warn = (infant||child) ? 100 : elderly ? 101 : 151
+  else if (c.includes('copd'))     warn = elderly ? 101 : 151
+  else if (c.includes('heart'))    warn = elderly ? 101 : 151
+  else if (c.includes('diabetes')) warn = elderly ? 101 : 151
+  else if (c.includes('children')) warn = 100
+  else if (c.includes('elderly'))  warn = 101
+  else {
+    if (infant||child) warn=100
+    else if (elderly)  warn=101
+  }
+  const mod = sev==='High'?-25:sev==='Low'?25:0
+  return Math.max(50, warn+mod)
+}
+
 export default function SettingsPage({ profile, health, onReloadUser }) {
   const [nodes, setNodes] = useState([])
   const [conditions, setConditions] = useState([])
@@ -93,6 +111,9 @@ export default function SettingsPage({ profile, health, onReloadUser }) {
     }
     setSaving(false)
   }
+
+  const selectedCond = conditions.find(c => String(c.condition_id) === String(healthForm.condition_id))?.condition_name || ''
+  const threshold = getWarnThreshold(selectedCond, healthForm.severity_level, healthForm.age)
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6">
@@ -241,6 +262,18 @@ export default function SettingsPage({ profile, health, onReloadUser }) {
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Live Warning Threshold Preview */}
+            <div className="mt-4 p-4 bg-brandBlue/10 border border-brandBlue/20 rounded-btn flex items-center justify-between">
+              <div>
+                <p className="text-xs text-white/50 uppercase tracking-wide">Personal Alert Threshold</p>
+                <p className="text-[10px] text-white/30 mt-0.5 max-w-[200px]">You will receive warning alerts when local AQI exceeds this level.</p>
+              </div>
+              <div className="text-right">
+                <span className="text-3xl font-black text-brandCyan">{threshold}</span>
+                <span className="text-[9px] block text-white/40 font-bold uppercase tracking-wider">AQI Index</span>
               </div>
             </div>
           </div>
