@@ -183,13 +183,6 @@ export default function UserDashboard({ profile, health, onSignOut }) {
                   <stop offset="0%" stopColor={meta.color} />
                   <stop offset="100%" stopColor={meta.color} stopOpacity={0.4} />
                 </linearGradient>
-                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
               </defs>
               {/* Background circle */}
               <circle
@@ -199,6 +192,20 @@ export default function UserDashboard({ profile, health, onSignOut }) {
                 fill="none"
                 stroke="rgba(255, 255, 255, 0.04)"
                 strokeWidth="8"
+              />
+              {/* Hardware-friendly ambient glow stroke */}
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke={meta.color}
+                strokeWidth="12"
+                strokeDasharray="251.2"
+                strokeDashoffset={251.2 - (251.2 * Math.min(aqi, 500)) / 500}
+                strokeLinecap="round"
+                opacity="0.16"
+                style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
               />
               {/* Foreground circle with dynamic fill */}
               <circle
@@ -211,7 +218,6 @@ export default function UserDashboard({ profile, health, onSignOut }) {
                 strokeDasharray="251.2"
                 strokeDashoffset={251.2 - (251.2 * Math.min(aqi, 500)) / 500}
                 strokeLinecap="round"
-                filter="url(#glow)"
                 style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
               />
             </svg>
