@@ -39,12 +39,12 @@ function getWarnThreshold(cond, sev, age) {
 }
 
 const POLLUTANTS = [
-  { key:'pm25',  label:'PM2.5', unit:'µg/m³', limit:60,  color:'#EF5350' },
-  { key:'pm10',  label:'PM10',  unit:'µg/m³', limit:100, color:'#FF7043' },
-  { key:'no2',   label:'NO2',   unit:'µg/m³', limit:80,  color:'#AB47BC' },
-  { key:'co',    label:'CO',    unit:'mg/m³',  limit:10,  color:'#FFA726' },
-  { key:'ozone', label:'Ozone', unit:'µg/m³', limit:100, color:'#42A5F5' },
-  { key:'nh3',   label:'NH3',   unit:'µg/m³', limit:400, color:'#FFCA28' },
+  { key:'pm25',  subAqiKey:'sub_aqi_pm25',  label:'PM2.5', unit:'µg/m³', limit:60,  color:'#EF5350' },
+  { key:'pm10',  subAqiKey:'sub_aqi_pm10',  label:'PM10',  unit:'µg/m³', limit:100, color:'#FF7043' },
+  { key:'no2',   subAqiKey:'sub_aqi_no2',   label:'NO2',   unit:'µg/m³', limit:80,  color:'#AB47BC' },
+  { key:'co',    subAqiKey:'sub_aqi_co',    label:'CO',    unit:'mg/m³',  limit:10,  color:'#FFA726' },
+  { key:'ozone', subAqiKey:'sub_aqi_ozone', label:'Ozone', unit:'µg/m³', limit:100, color:'#42A5F5' },
+  { key:'nh3',   subAqiKey:'sub_aqi_nh3',   label:'NH3',   unit:'µg/m³', limit:400, color:'#FFCA28' },
 ]
 
 function formatTime(ts) {
@@ -243,15 +243,18 @@ export default function UserDashboard({ profile, health, onSignOut }) {
 
         {/* Pollutant quick stats */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-          {POLLUTANTS.map(({ key, label, unit, limit, color }) => {
+          {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
             const val = reading?.[key] || 0
-            const pct = Math.min((val/limit)*100, 100)
+            const subAqi = reading?.[subAqiKey] || 0
+            const pct = Math.min((subAqi / 500) * 100, 100)
             return (
               <div key={key} className="glass-card p-4 text-center group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
                 style={{ background: `radial-gradient(circle at center, ${color}08 0%, rgba(255,255,255,0.03) 100%)` }}>
                 <div className="text-xs text-white/40 mb-1 font-semibold group-hover:text-white/60 transition-colors">{label}</div>
-                <div className="text-2xl font-black mb-1 transition-transform group-hover:scale-105 duration-300" style={{ color }}>{val.toFixed(1)}</div>
-                <div className="text-[10px] text-white/30 mb-3">{unit}</div>
+                <div className="text-2xl font-black mb-0.5 transition-transform group-hover:scale-105 duration-300" style={{ color }}>
+                  {subAqi}
+                </div>
+                <div className="text-[10px] text-white/30 mb-3">{val.toFixed(1)} {unit}</div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width:`${pct}%`, background:color }} />
                 </div>
@@ -310,21 +313,28 @@ function PollutantsView({ reading, loading, onRefresh }) {
         </button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {POLLUTANTS.map(({ key, label, unit, limit, color }) => {
+        {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
           const val = reading?.[key] || 0
-          const pct = Math.min((val/limit)*100, 100)
-          const status = pct>=100?'Exceeds Limit':pct>=80?'High':pct>=50?'Moderate':'Safe'
-          const statusColor = pct>=100?'#FF0000':pct>=80?'#FF7E00':pct>=50?'#FFFF00':'#00E400'
+          const subAqi = reading?.[subAqiKey] || 0
+          const meta = aqiMeta(subAqi)
+          const pct = Math.min((subAqi / 500) * 100, 100)
           return (
             <div key={key} className="glass-card p-5" style={{ borderColor: color+'20' }}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-bold text-white">{label}</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color:statusColor, background:statusColor+'15' }}>{status}</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ color: meta.color, background: meta.bg }}>
+                  {meta.label}
+                </span>
               </div>
-              <div className="text-3xl font-black mb-1" style={{ color }}>{val.toFixed(1)}</div>
-              <div className="text-xs text-white/40 mb-3">{unit} <span className="text-white/20">/ limit {limit}</span></div>
+              <div className="text-3xl font-black mb-1 transition-all duration-300" style={{ color: meta.color }}>
+                {subAqi} <span className="text-xs text-white/30 font-medium">Sub-AQI</span>
+              </div>
+              <div className="text-xs text-white/40 mb-3">
+                Concentration: <span className="font-semibold text-white/70">{val.toFixed(1)} {unit}</span>
+                <span className="text-white/20"> / limit {limit}</span>
+              </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all" style={{ width:`${pct}%`, background:color }} />
+                <div className="h-full rounded-full transition-all duration-500" style={{ width:`${pct}%`, background: meta.color }} />
               </div>
             </div>
           )
