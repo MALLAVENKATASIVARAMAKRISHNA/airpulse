@@ -243,18 +243,16 @@ export default function UserDashboard({ profile, health, onSignOut }) {
 
         {/* Pollutant quick stats */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-          {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
-            const val = reading?.[key] || 0
+          {POLLUTANTS.map(({ key, subAqiKey, label, color }) => {
             const subAqi = reading?.[subAqiKey] || 0
-            const pct = Math.min((val / limit) * 100, 100)
+            const pct = Math.min((subAqi / 500) * 100, 100)
             return (
               <div key={key} className="glass-card p-4 text-center group hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
                 style={{ background: `radial-gradient(circle at center, ${color}08 0%, rgba(255,255,255,0.03) 100%)` }}>
-                <div className="text-xs text-white/40 mb-1 font-semibold group-hover:text-white/60 transition-colors">{label}</div>
-                <div className="text-2xl font-black mb-0.5 transition-transform group-hover:scale-105 duration-300" style={{ color }}>
-                  {val.toFixed(1)} <span className="text-xs text-white/40 font-medium">{unit}</span>
+                <div className="text-xs text-white/40 mb-2 font-semibold group-hover:text-white/60 transition-colors">{label}</div>
+                <div className="text-3xl font-black mb-3 transition-transform group-hover:scale-105 duration-300" style={{ color }}>
+                  {subAqi}
                 </div>
-                <div className="text-[10px] text-white/30 mb-3">Sub-AQI: {subAqi}</div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width:`${pct}%`, background:color }} />
                 </div>
