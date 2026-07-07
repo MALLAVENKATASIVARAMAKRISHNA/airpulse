@@ -187,8 +187,8 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-600 uppercase tracking-widest font-semibold">Live Air Intelligence</p>
-            <h1 className="text-2xl font-black text-slate-800 mt-1">
+            <p className="text-xs text-white/40 uppercase tracking-widest font-semibold">Live Air Intelligence</p>
+            <h1 className="text-2xl font-black text-white mt-1">
               {profile.full_name?.split(' ')[0]}'s Dashboard
             </h1>
           </div>
@@ -204,10 +204,10 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
         </div>
 
         {/* Location bar */}
-        <div className="flex items-center gap-2 text-sm text-slate-600 font-semibold">
+        <div className="flex items-center gap-2 text-sm text-white/40">
           <MapPin size={14} className="text-brandCyan"/>
           <span>{reading?.location || '—'}, {reading?.district || 'Chennai'}</span>
-          <span className="ml-auto text-xs font-normal">Updated {formatTime(reading?.recorded_at)}</span>
+          <span className="ml-auto text-xs text-white/30">Updated {formatTime(reading?.recorded_at)}</span>
         </div>
 
         {/* Danger banner */}

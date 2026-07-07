@@ -7,8 +7,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Inter', sans-serif;
-    background-color: #c3ded3;
-    color: #ffffff;
+    background-color: #080705;
+    color: #FAFBFB;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
@@ -18,20 +18,20 @@
 .mesh-glow-blue {
   position: fixed; pointer-events: none; z-index: 0;
   width: 600px; height: 600px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,106,255,0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(124,148,54,0.04) 0%, transparent 70%);
   top: -200px; left: -200px;
 }
 .mesh-glow-green {
   position: fixed; pointer-events: none; z-index: 0;
   width: 500px; height: 500px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(16,211,67,0.04) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(77,93,84,0.03) 0%, transparent 70%);
   bottom: -100px; right: -100px;
 }
 
 /* ── Glassmorphism card ── */
 .glass-card {
-  background: #0c0d12;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: #121413;
+  border: 1px solid #212322;
   border-radius: 16px;
   backdrop-filter: blur(16px);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
@@ -39,8 +39,8 @@
 }
 
 .glass-card:hover {
-  background: #070709;
-  border-color: rgba(255,255,255,0.12);
+  background: #1a1c1b;
+  border-color: #2d302f;
   box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.5);
 }
 
