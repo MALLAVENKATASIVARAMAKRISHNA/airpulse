@@ -10,18 +10,43 @@ MODELS_DIR = os.path.join(os.path.dirname(__file__), 'ml_models')
 _models = {}
 _scaler = None
 
+S3_BUCKET  = os.environ.get('S3_BUCKET', 'airpulse-models')
+MODEL_FILES = [
+    'aqi_forecast_6h.pkl', 'aqi_forecast_24h.pkl', 'aqi_forecast_48h.pkl',
+    'anomaly_detector.pkl', 'anomaly_scaler.pkl', 'cause_classifier.pkl',
+]
+
+def _download_from_s3():
+    """Download model files from S3 if not present locally."""
+    import boto3
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    s3 = boto3.client('s3', region_name=os.environ.get('AWS_REGION', 'ap-south-1'))
+    for fname in MODEL_FILES:
+        local_path = os.path.join(MODELS_DIR, fname)
+        if not os.path.exists(local_path):
+            try:
+                print(f"Downloading {fname} from S3...")
+                s3.download_file(S3_BUCKET, fname, local_path)
+                print(f"  ✓ {fname}")
+            except Exception as e:
+                print(f"  ✗ {fname}: {e}")
+
 def load_models():
     global _scaler
     if '6h' in _models:
         return
+    _download_from_s3()
     try:
         for h in ['6h', '24h', '48h']:
             _models[h] = joblib.load(os.path.join(MODELS_DIR, f'aqi_forecast_{h}.pkl'))
         _models['anomaly'] = joblib.load(os.path.join(MODELS_DIR, 'anomaly_detector.pkl'))
         _scaler = joblib.load(os.path.join(MODELS_DIR, 'anomaly_scaler.pkl'))
+    except Exception as e:
+        print(f"Error loading forecast/anomaly models: {e}")
+    try:
         _models['cause'] = joblib.load(os.path.join(MODELS_DIR, 'cause_classifier.pkl'))
     except Exception as e:
-        print(f"Error loading local ML models: {e}")
+        print(f"Cause classifier not loaded (rule-based fallback active): {e}")
 
 def run_local_inference(node_id: str, reading: dict) -> tuple[bool, dict, str]:
     """

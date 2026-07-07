@@ -187,7 +187,7 @@ def generate_and_insert(node_id, base):
         get_iot_client().publish(
             topic=f'airpulse/ml/{node_id}',
             qos=1,
-            payload=json.dumps({'predictions': preds}),
+            payload=json.dumps({'node_id': node_id, 'predictions': preds, 'is_anomaly': is_anomaly}),
         )
     except Exception as e:
         print(f'IoT publish error [{node_id}]: {e}')
