@@ -344,3 +344,69 @@
 :root:not(.dark) .map-popup-unit {
   color: rgba(12, 15, 13, 0.5) !important;
 }
+
+/* Sidebar panel color override in Light Mode */
+:root:not(.dark) aside {
+  background-color: var(--sidebar-bg) !important;
+  border-right-color: var(--card-border) !important;
+}
+
+:root:not(.dark) aside * {
+  border-color: rgba(12, 15, 13, 0.1);
+}
+
+:root:not(.dark) aside .brand-text {
+  background: linear-gradient(135deg, #006aff 0%, #7c9436 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+:root:not(.dark) aside nav button {
+  color: var(--text-muted) !important;
+}
+
+:root:not(.dark) aside nav button:hover {
+  background-color: rgba(12, 15, 13, 0.05) !important;
+  color: var(--text-main) !important;
+}
+
+/* Sidebar navigation links active state */
+:root:not(.dark) aside nav button[class*="bg-[#b2ccbf]"] {
+  background-color: rgba(124, 148, 54, 0.15) !important;
+  color: #516223 !important;
+  border-color: rgba(124, 148, 54, 0.3) !important;
+}
+
+:root:not(.dark) aside nav button[class*="bg-purple-500"] {
+  background-color: rgba(168, 85, 247, 0.12) !important;
+  color: #7e22ce !important;
+  border-color: rgba(168, 85, 247, 0.25) !important;
+}
+
+/* Sidebar text overrides */
+:root:not(.dark) aside p,
+:root:not(.dark) aside span {
+  color: var(--text-muted) !important;
+}
+
+:root:not(.dark) aside .text-white {
+  color: var(--text-main) !important;
+}
+
+:root:not(.dark) aside span[class*="text-purple-400"] {
+  color: #7e22ce !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+  background-color: rgba(168, 85, 247, 0.1) !important;
+}
+
+:root:not(.dark) aside span[class*="text-brandCyan"] {
+  color: #0d9488 !important;
+  border-color: rgba(13, 148, 136, 0.3) !important;
+  background-color: rgba(13, 148, 136, 0.1) !important;
+}
+
+:root:not(.dark) aside span[class*="text-orange-400"] {
+  color: #c2410c !important;
+  border-color: rgba(194, 65, 12, 0.3) !important;
+  background-color: rgba(194, 65, 12, 0.1) !important;
+}
