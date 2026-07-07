@@ -77,6 +77,7 @@ export const api = {
   userCount:      () => req('GET', '/api/users/count'),
   updateUserRole: (userId, role) => req('PATCH', `/api/users/${userId}/role`, { role }),
   createAuthority: (data) => req('POST', '/api/users/authority', data),
+  adminUpdateUser: (userId, data) => req('PUT', `/api/users/${userId}`, data),
 
   // Readings (admin)
   insertReading: (data) => req('POST', '/api/readings/', data),

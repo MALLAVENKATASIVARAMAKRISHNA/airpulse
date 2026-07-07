@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel, EmailStr
 from database import query
 from auth import admin_only, hash_password
+from typing import Optional
 
 router = APIRouter()
 
@@ -47,3 +48,32 @@ def create_authority(data: CreateAuthorityRequest, current_user=Depends(admin_on
         VALUES (%s, %s, %s, %s, 'authority', %s, %s, TRUE)
     """, (data.full_name, data.email, data.phone_number, hashed_pw, data.state, data.district), fetch='none')
     return {'ok': True, 'message': 'Authority created successfully.'}
+
+class AdminUpdateUserRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    phone_number: str
+    node_id: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+
+@router.put('/{user_id}')
+def admin_update_user(user_id: int, data: AdminUpdateUserRequest, current_user=Depends(admin_only)):
+    user = query('SELECT role FROM users WHERE user_id = %s', (user_id,), fetch='one')
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    if user['role'] == 'admin':
+        raise HTTPException(status_code=403, detail='Cannot modify admin accounts')
+    
+    location = None
+    if data.node_id:
+        node = query('SELECT location FROM nodes WHERE node_id = %s', (data.node_id,), fetch='one')
+        if node:
+            location = node['location']
+            
+    query("""
+        UPDATE users
+        SET full_name = %s, email = %s, phone_number = %s, node_id = %s, location = %s, state = %s, district = %s
+        WHERE user_id = %s
+    """, (data.full_name, data.email, data.phone_number, data.node_id, location, data.state, data.district, user_id), fetch='none')
+    return {'ok': True, 'message': 'User profile updated successfully.'}

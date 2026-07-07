@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import mqtt from 'mqtt'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie } from 'recharts'
-import { Activity, Check, MapPin, Pause, Play, Plus, RefreshCw, Search, Shield, Users, Zap, Globe } from 'lucide-react'
+import { Activity, Check, MapPin, Pause, Play, Plus, RefreshCw, Search, Shield, Users, Zap, Globe, Pencil } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { api } from '../lib/api'
 
@@ -52,6 +52,10 @@ export default function AdminDashboard({ profile, onSignOut }) {
   const [authForm, setAuthForm] = useState({ fullName: '', email: '', phone: '', state: '', district: '' })
   const [error, setError] = useState('')
 
+  const [editingUser, setEditingUser] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({ fullName: '', email: '', phone: '', nodeId: '', state: '', district: '' })
+
   const load = useCallback(async () => {
     try {
       const [n, uc, s, a] = await Promise.all([api.latestAll(), api.userCount(), api.simStatus(), api.anomalies()])
@@ -83,6 +87,40 @@ export default function AdminDashboard({ profile, onSignOut }) {
       await loadUsers()
     } catch(err) {
       alert(err.message || 'Failed to create authority.')
+    }
+    setLoading(false)
+  }
+
+  const handleEditClick = (user) => {
+    setEditingUser(user)
+    setEditForm({
+      fullName: user.full_name || '',
+      email: user.email || '',
+      phone: user.phone_number || '',
+      nodeId: user.node_id || '',
+      state: user.state || '',
+      district: user.district || ''
+    })
+    setShowEditModal(true)
+  }
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true); setError('')
+    try {
+      await api.adminUpdateUser(editingUser.user_id, {
+        full_name: editForm.fullName,
+        email: editForm.email,
+        phone_number: editForm.phone,
+        node_id: editingUser.role === 'user' ? editForm.nodeId : null,
+        state: editingUser.role === 'authority' ? editForm.state : null,
+        district: editingUser.role === 'authority' ? editForm.district : null
+      })
+      setShowEditModal(false)
+      setEditingUser(null)
+      await loadUsers()
+    } catch (err) {
+      alert(err.message || 'Failed to update user profile.')
     }
     setLoading(false)
   }
@@ -489,7 +527,12 @@ export default function AdminDashboard({ profile, onSignOut }) {
                       <td className="px-4 py-3 text-white/40 text-xs">
                         {u.condition_name ? `${u.condition_name} (Lvl ${u.severity_level})` : 'None'}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 flex items-center gap-2">
+                        <button onClick={() => handleEditClick(u)}
+                          className="p-1.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-all"
+                          title="Edit Profile">
+                          <Pencil size={12}/>
+                        </button>
                         <button onClick={()=>updateRole(u.user_id,'authority')}
                           className="flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-all">
                           <Shield size={10}/> Make Authority
@@ -531,7 +574,12 @@ export default function AdminDashboard({ profile, onSignOut }) {
                           {u.must_change_password ? 'Default' : 'Changed'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 flex items-center gap-2">
+                        <button onClick={() => handleEditClick(u)}
+                          className="p-1.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-all"
+                          title="Edit Jurisdiction / Profile">
+                          <Pencil size={12}/>
+                        </button>
                         <button onClick={()=>updateRole(u.user_id,'user')}
                           className="flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all">
                           Revoke
@@ -630,6 +678,109 @@ export default function AdminDashboard({ profile, onSignOut }) {
                     <button type="submit" disabled={loading}
                       className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-400 hover:bg-purple-500/30 rounded-btn text-xs font-semibold transition-all disabled:opacity-50">
                       {loading ? 'Adding...' : 'Create Account'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Profile Modal Overlay */}
+          {showEditModal && editingUser && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="glass-card max-w-md w-full p-6 space-y-4 animate-fadeIn">
+                <h2 className="text-lg font-black text-white flex items-center gap-2">
+                  <Pencil size={18} className="text-brandCyan"/> Edit {editingUser.role === 'authority' ? 'Authority' : 'User'} Profile
+                </h2>
+                <p className="text-xs text-white/40">
+                  Update details for {editingUser.full_name}.
+                </p>
+                
+                <form onSubmit={handleEditSubmit} className="space-y-3.5">
+                  {/* Name */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Full Name</label>
+                    <input type="text" required
+                      value={editForm.fullName} onChange={e => setEditForm(p=>({...p, fullName: e.target.value}))}
+                      className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Email Address</label>
+                    <input type="email" required
+                      value={editForm.email} onChange={e => setEditForm(p=>({...p, email: e.target.value}))}
+                      className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Phone Number</label>
+                    <input type="tel" required
+                      value={editForm.phone} onChange={e => setEditForm(p=>({...p, phone: e.target.value}))}
+                      className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                  </div>
+
+                  {/* Jurisdiction state/district (For Authority) */}
+                  {editingUser.role === 'authority' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">State Jurisdiction</label>
+                        {states.length > 0 ? (
+                          <select required value={editForm.state}
+                            onChange={e => setEditForm(p=>({...p, state: e.target.value, district: ''}))}
+                            className="w-full bg-[#060913] border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40">
+                            <option value="">Select State</option>
+                            {states.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        ) : (
+                          <input type="text" placeholder="State" required
+                            value={editForm.state} onChange={e => setEditForm(p=>({...p, state: e.target.value}))}
+                            className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">District Jurisdiction</label>
+                        {states.length > 0 ? (
+                          <select required value={editForm.district}
+                            onChange={e => setEditForm(p=>({...p, district: e.target.value}))}
+                            disabled={!editForm.state}
+                            className="w-full bg-[#060913] border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40 disabled:opacity-40">
+                            <option value="">Select District</option>
+                            {editForm.state ? [...new Set(nodes.filter(n => n.state === editForm.state).map(n => n.district).filter(Boolean))].map(d => <option key={d} value={d}>{d}</option>) : null}
+                          </select>
+                        ) : (
+                          <input type="text" placeholder="District" required
+                            value={editForm.district} onChange={e => setEditForm(p=>({...p, district: e.target.value}))}
+                            className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Location Node selection (For Citizen) */}
+                  {editingUser.role === 'user' && (
+                    <div>
+                      <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Monitoring Node Location</label>
+                      <select required value={editForm.nodeId}
+                        onChange={e => setEditForm(p=>({...p, nodeId: e.target.value}))}
+                        className="w-full bg-[#060913] border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40">
+                        <option value="">Select Node Location</option>
+                        {nodes.map(n => <option key={n.node_id} value={n.node_id}>{n.location} ({n.district})</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Modal Buttons */}
+                  <div className="flex justify-end gap-2 pt-3">
+                    <button type="button" onClick={() => { setShowEditModal(false); setEditingUser(null) }}
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-btn text-xs font-semibold transition-all">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={loading}
+                      className="px-4 py-2 bg-brandCyan/20 border border-brandCyan/30 text-brandCyan hover:bg-brandCyan/30 rounded-btn text-xs font-semibold transition-all disabled:opacity-50">
+                      {loading ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </form>
