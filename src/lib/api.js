@@ -65,6 +65,7 @@ export const api = {
   nodes:        ()       => req('GET', '/api/nodes/'),
   latestAll:    ()       => req('GET', '/api/nodes/latest'),
   nodeReadings: (nodeId) => req('GET', `/api/nodes/${nodeId}/readings`),
+  createNode:   (body)   => req('POST', '/api/nodes/', body),
 
   // ML
   predictions: (nodeId) => req('GET',  `/api/ml/predictions/${nodeId}`),

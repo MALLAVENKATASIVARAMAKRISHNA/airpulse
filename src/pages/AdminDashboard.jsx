@@ -53,6 +53,23 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
   const [error, setError] = useState('')
 
   const [editingUser, setEditingUser] = useState(null)
+
+  const [showAddNode, setShowAddNode] = useState(false)
+  const [nodeForm, setNodeForm] = useState({
+    node_id: '',
+    location: '',
+    district: '',
+    state: '',
+    pincode: '',
+    latitude: '',
+    longitude: '',
+    zone_type: 'Residential',
+    near_highway: false,
+    near_factory: false,
+    near_construction: false,
+    population_density: '50',
+    green_cover_percentage: '20'
+  })
   const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState({ fullName: '', email: '', phone: '', nodeId: '', state: '', district: '' })
 
@@ -87,6 +104,40 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
       await loadUsers()
     } catch(err) {
       alert(err.message || 'Failed to create authority.')
+    }
+    setLoading(false)
+  }
+
+  async function handleAddNode(e) {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await api.createNode({
+        node_id: nodeForm.node_id,
+        location: nodeForm.location,
+        district: nodeForm.district,
+        state: nodeForm.state,
+        pincode: nodeForm.pincode,
+        latitude: parseFloat(nodeForm.latitude) || 0.0,
+        longitude: parseFloat(nodeForm.longitude) || 0.0,
+        zone_type: nodeForm.zone_type,
+        near_highway: nodeForm.near_highway,
+        near_factory: nodeForm.near_factory,
+        near_construction: nodeForm.near_construction,
+        population_density: parseInt(nodeForm.population_density) || 50,
+        green_cover_percentage: parseFloat(nodeForm.green_cover_percentage) || 20.0
+      })
+      setShowAddNode(false)
+      setNodeForm({
+        node_id: '', location: '', district: '', state: '', pincode: '',
+        latitude: '', longitude: '', zone_type: 'Residential',
+        near_highway: false, near_factory: false, near_construction: false,
+        population_density: '50', green_cover_percentage: '20'
+      })
+      const n = await api.latestAll()
+      setNodes(n || [])
+    } catch(err) {
+      alert(err.message || 'Failed to register node.')
     }
     setLoading(false)
   }
@@ -425,7 +476,13 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
 
       return (
         <div className="p-8 max-w-4xl mx-auto">
-          <h1 className="text-2xl font-black text-white mb-6 flex items-center gap-2"><Globe size={22} className="text-brandCyan"/> Monitoring Nodes</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-black text-white flex items-center gap-2"><Globe size={22} className="text-brandCyan"/> Monitoring Nodes</h1>
+            <button onClick={() => setShowAddNode(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-brandCyan/20 text-brandCyan hover:bg-brandCyan/30 border border-brandCyan/30 text-sm font-semibold rounded-btn transition-all">
+              + Add Node
+            </button>
+          </div>
           <div className="space-y-4">
             {nodes.map(n=>{
               const m=aqiMeta(n.aqi||0)
@@ -909,6 +966,130 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
   return (
     <AppShell role="admin" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab} theme={theme} toggleTheme={toggleTheme}>
       {renderContent()}
+
+      {/* Add Node Modal Overlay */}
+      {showAddNode && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-card max-w-lg w-full p-6 space-y-4 animate-fadeIn overflow-y-auto max-h-[90vh]">
+            <h2 className="text-lg font-black text-white flex items-center gap-2">
+              <Globe size={18} className="text-brandCyan"/> Register New Monitoring Node
+            </h2>
+            <p className="text-xs text-white/40">
+              Register a new hardware sensing node in the network and initialize its database telemetry profile.
+            </p>
+            
+            <form onSubmit={handleAddNode} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Node ID</label>
+                  <input type="text" placeholder="e.g. NODE006" required
+                    value={nodeForm.node_id} onChange={e=>setNodeForm(p=>({...p, node_id: e.target.value.toUpperCase()}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Location Name</label>
+                  <input type="text" placeholder="e.g. Adyar Park" required
+                    value={nodeForm.location} onChange={e=>setNodeForm(p=>({...p, location: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">District</label>
+                  <input type="text" placeholder="e.g. Chennai" required
+                    value={nodeForm.district} onChange={e=>setNodeForm(p=>({...p, district: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">State</label>
+                  <input type="text" placeholder="e.g. Tamil Nadu" required
+                    value={nodeForm.state} onChange={e=>setNodeForm(p=>({...p, state: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Pincode</label>
+                  <input type="text" placeholder="e.g. 600020" required
+                    value={nodeForm.pincode} onChange={e=>setNodeForm(p=>({...p, pincode: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Latitude</label>
+                  <input type="number" step="any" placeholder="e.g. 13.0012" required
+                    value={nodeForm.latitude} onChange={e=>setNodeForm(p=>({...p, latitude: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Longitude</label>
+                  <input type="number" step="any" placeholder="e.g. 80.2565" required
+                    value={nodeForm.longitude} onChange={e=>setNodeForm(p=>({...p, longitude: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Zone Type</label>
+                  <select value={nodeForm.zone_type} onChange={e=>setNodeForm(p=>({...p, zone_type: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40">
+                    <option value="Residential" className="bg-[#0c0d12]">Residential</option>
+                    <option value="Commercial" className="bg-[#0c0d12]">Commercial</option>
+                    <option value="Industrial" className="bg-[#0c0d12]">Industrial</option>
+                    <option value="Sensitive" className="bg-[#0c0d12]">Sensitive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Pop. Density</label>
+                  <input type="number" required
+                    value={nodeForm.population_density} onChange={e=>setNodeForm(p=>({...p, population_density: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Green Cover %</label>
+                  <input type="number" step="any" required
+                    value={nodeForm.green_cover_percentage} onChange={e=>setNodeForm(p=>({...p, green_cover_percentage: e.target.value}))}
+                    className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                </div>
+              </div>
+
+              <div className="space-y-1 py-1.5">
+                <span className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Environmental Proximity Factors</span>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+                    <input type="checkbox" checked={nodeForm.near_highway} onChange={e=>setNodeForm(p=>({...p, near_highway: e.target.checked}))}
+                      className="rounded bg-white/5 border-white/10 text-brandCyan focus:ring-0 focus:ring-offset-0"/>
+                    Near Highway
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+                    <input type="checkbox" checked={nodeForm.near_factory} onChange={e=>setNodeForm(p=>({...p, near_factory: e.target.checked}))}
+                      className="rounded bg-white/5 border-white/10 text-brandCyan focus:ring-0 focus:ring-offset-0"/>
+                    Near Factory
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+                    <input type="checkbox" checked={nodeForm.near_construction} onChange={e=>setNodeForm(p=>({...p, near_construction: e.target.checked}))}
+                      className="rounded bg-white/5 border-white/10 text-brandCyan focus:ring-0 focus:ring-offset-0"/>
+                    Near Construction
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button type="button" onClick={() => setShowAddNode(false)}
+                  className="flex-1 px-4 py-2 border border-white/10 hover:bg-white/5 text-sm font-semibold rounded-btn transition-all text-white/70">
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading}
+                  className="flex-1 px-4 py-2 bg-brandCyan text-black hover:bg-brandCyan/80 disabled:opacity-40 text-sm font-bold rounded-btn transition-all">
+                  {loading ? 'Registering...' : 'Register Node'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   )
 }
