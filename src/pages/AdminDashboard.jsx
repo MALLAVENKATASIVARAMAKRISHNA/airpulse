@@ -238,9 +238,9 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
           <p className="text-xs text-white/40 uppercase tracking-wide mb-4">AQI by Node</p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} margin={{top:0,right:0,bottom:0,left:-20}}>
-              <XAxis dataKey="name" tick={{fill:'rgba(255,255,255,0.4)',fontSize:11}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fill:'rgba(255,255,255,0.4)',fontSize:11}} axisLine={false} tickLine={false}/>
-              <Tooltip contentStyle={{background:'#060913',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'white'}}/>
+              <XAxis dataKey="name" tick={{fill:'var(--text-muted)',fontSize:11}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:'var(--text-muted)',fontSize:11}} axisLine={false} tickLine={false}/>
+              <Tooltip contentStyle={{background:'var(--card-bg)',border:'1px solid var(--card-border)',borderRadius:8,color:'var(--text-main)'}}/>
               <Bar dataKey="AQI" radius={[6,6,0,0]}>{chartData.map((d,i)=><Cell key={i} fill={d.fill}/>)}</Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -331,9 +331,9 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
                               <stop offset="95%" stopColor={meta.color} stopOpacity={0}/>
                             </linearGradient>
                           </defs>
-                          <XAxis dataKey="time" tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false} interval={4}/>
-                          <YAxis tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false}/>
-                          <Tooltip contentStyle={{ background:'#060913', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
+                          <XAxis dataKey="time" tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false} interval={4}/>
+                          <YAxis tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                          <Tooltip contentStyle={{ background:'var(--card-bg)', border:'1px solid var(--card-border)', borderRadius:8, color:'var(--text-main)' }}/>
                           <Area type="monotone" dataKey="aqi" stroke={meta.color} strokeWidth={2} fill="url(#node-aqi-grad)" dot={false}/>
                         </AreaChart>
                       </ResponsiveContainer>

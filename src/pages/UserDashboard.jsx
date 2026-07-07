@@ -331,9 +331,9 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
                     <stop offset="95%" stopColor="#10d343" stopOpacity={0.02}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="day" tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 250]} tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false}/>
-                <Tooltip contentStyle={{ background:'#0c0d12', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
+                <XAxis dataKey="day" tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 250]} tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                <Tooltip contentStyle={{ background:'var(--card-bg)', border:'1px solid var(--card-border)', borderRadius:8, color:'var(--text-main)' }}/>
                 
                 {/* Actual AQI Area Fill */}
                 <Area type="monotone" dataKey="actual" name="Actual AQI" stroke="#10d343" strokeWidth={1.5} fill="url(#actual-aqi-grad)" dot={false} />
