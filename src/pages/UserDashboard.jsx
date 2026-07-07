@@ -89,8 +89,8 @@ function CustomPredictDot(props) {
   if (payload.showLabel) {
     return (
       <g>
-        <circle cx={cx} cy={cy} r={5} fill="#00a2ff" stroke="#000" strokeWidth={2} />
-        <rect x={cx - 50} y={cy - 35} width={100} height={24} rx={4} fill="#0d0f14" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+        <circle cx={cx} cy={cy} r={5} fill="#b2ccbf" stroke="#000" strokeWidth={2} />
+        <rect x={cx - 50} y={cy - 35} width={100} height={24} rx={4} fill="#1b1b1b" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
         <text x={cx} y={cy - 20} fill="#ffffff" fontSize={10} fontWeight="bold" textAnchor="middle">
           Predicted AQI 35
         </text>
@@ -98,7 +98,7 @@ function CustomPredictDot(props) {
       </g>
     )
   }
-  return <circle cx={cx} cy={cy} r={3} fill="#00a2ff" opacity={0.6} />
+  return <circle cx={cx} cy={cy} r={3} fill="#b2ccbf" opacity={0.6} />
 }
 
 export default function UserDashboard({ profile, health, onSignOut, onReloadUser }) {
@@ -339,14 +339,14 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
                 <Area type="monotone" dataKey="actual" name="Actual AQI" stroke="#10d343" strokeWidth={1.5} fill="url(#actual-aqi-grad)" dot={false} />
                 
                 {/* Predicted AQI Line */}
-                <Line type="monotone" dataKey="predicted" name="Predicted AQI" stroke="#00a2ff" strokeWidth={2} dot={<CustomPredictDot />} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="predicted" name="Predicted AQI" stroke="#b2ccbf" strokeWidth={2} dot={<CustomPredictDot />} activeDot={{ r: 6 }} />
               </ComposedChart>
             </ResponsiveContainer>
             
             {/* Custom Legend */}
             <div className="flex items-center gap-4 mt-3 justify-center text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-0.5 bg-[#00a2ff]" />
+                <div className="w-3 h-0.5 bg-[#b2ccbf]" />
                 <span className="text-white/50">Predicted AQI</span>
               </div>
               <div className="flex items-center gap-1.5">

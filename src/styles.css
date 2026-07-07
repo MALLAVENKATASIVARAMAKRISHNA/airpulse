@@ -7,7 +7,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Inter', sans-serif;
-    background-color: #080705;
+    background-color: #050a05;
     color: #FAFBFB;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
@@ -18,20 +18,20 @@
 .mesh-glow-blue {
   position: fixed; pointer-events: none; z-index: 0;
   width: 600px; height: 600px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(124,148,54,0.04) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(178,204,191,0.06) 0%, transparent 70%);
   top: -200px; left: -200px;
 }
 .mesh-glow-green {
   position: fixed; pointer-events: none; z-index: 0;
   width: 500px; height: 500px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(77,93,84,0.03) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(5,10,5,0.12) 0%, transparent 70%);
   bottom: -100px; right: -100px;
 }
 
 /* ── Glassmorphism card ── */
 .glass-card {
-  background: #121413;
-  border: 1px solid #212322;
+  background: #1b1b1b;
+  border: 1px solid #2e312e;
   border-radius: 16px;
   backdrop-filter: blur(16px);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
@@ -39,9 +39,9 @@
 }
 
 .glass-card:hover {
-  background: #1a1c1b;
-  border-color: #2d302f;
-  box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.5);
+  background: #121212;
+  border-color: #3e423e;
+  box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.6);
 }
 
 /* ── Brand gradient ── */
