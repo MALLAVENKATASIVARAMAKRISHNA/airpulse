@@ -203,7 +203,7 @@ def start_sim(data: StartRequest, current_user=Depends(admin_only)):
     if sim.running:
         return {'ok': True, 'message': 'Already running'}
     sim.running  = True
-    sim.interval = max(10, data.interval_seconds)
+    sim.interval = max(5, data.interval_seconds)
     sim.thread   = threading.Thread(target=simulation_loop, daemon=True)
     sim.thread.start()
     return {'ok': True, 'message': f'Simulation started — interval {sim.interval}s'}

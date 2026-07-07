@@ -122,11 +122,11 @@ def simulate_node(client, node):
                   f"Dominant: {reading['dominant_pollutant']:<6}  → {topic}")
         except Exception as e:
             print(f"[{node['name']}] Error: {e}")
-        time.sleep(30)
+        time.sleep(5)
 
 # ── Main ──────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("AirPulse Simulator — publishing to AWS IoT Core every 30s")
+    print("AirPulse Simulator — publishing to AWS IoT Core every 5s")
     print(f"Endpoint: {IOT_ENDPOINT}\n")
 
     client = create_mqtt_client()
