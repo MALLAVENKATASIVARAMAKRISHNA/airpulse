@@ -141,7 +141,7 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
             {tab === 'overview' && (
               <div className="space-y-6">
                 {/* Summary cards */}
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
                     { label: 'District Avg AQI', value: districtAvg,        meta: aqiMeta(districtAvg), sub: aqiMeta(districtAvg).label },
                     { label: 'Active Nodes',    value: nodes.length,   color: '#00a2ff',       sub: 'assigned nodes' },
@@ -333,7 +333,7 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
                             </div>
 
                             {/* Detailed metrics grid */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                               {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
                                 const val = selectedNode?.[key] || 0
                                 const subAqi = selectedNode?.[subAqiKey] || 0

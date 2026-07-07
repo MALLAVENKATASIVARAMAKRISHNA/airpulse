@@ -270,7 +270,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label:'Active Nodes',    value:nodes.length, color:'#00a2ff' },
             { label:'Registered Users',value:userCount,    color:'#10d343' },
@@ -298,7 +298,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
         </div>
 
         {/* Node cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {nodes.map(n=>{
             const m=aqiMeta(n.aqi||0)
             return (
@@ -439,7 +439,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
                 </div>
 
                 {/* Detailed metrics grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
                     const val = selectedNode?.[key] || 0
                     const subAqi = selectedNode?.[subAqiKey] || 0
@@ -902,7 +902,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
                     <Plus size={12}/> Insert Reading
                   </button>
                 </div>
-                <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
                   {fields.map(({k, label, required})=>(
                     <div key={k}>
                       <p className="text-[10px] text-white/35 mb-1">{label}{required?' *':''}</p>

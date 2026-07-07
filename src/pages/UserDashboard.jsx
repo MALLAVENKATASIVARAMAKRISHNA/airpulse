@@ -291,7 +291,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
         </div>
 
         {/* Pollutant quick stats */}
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {POLLUTANTS.map(({ key, subAqiKey, label, color }) => {
             const subAqi = reading?.[subAqiKey] || 0
             const pct = Math.min((subAqi / 500) * 100, 100)
@@ -474,7 +474,7 @@ function PollutantsView({ reading, loading, onRefresh }) {
       )}
 
       {/* Pollutant Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {POLLUTANTS.map(({ key, subAqiKey, label, unit, limit, color }) => {
           const val = reading?.[key] || 0
           const subAqi = reading?.[subAqiKey] || 0

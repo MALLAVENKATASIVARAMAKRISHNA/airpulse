@@ -1,4 +1,5 @@
-import { Activity, Bell, BarChart2, Brain, Globe, Heart, LogOut, MapPin, Play, ShieldCheck, Settings, TrendingUp, Users, Wind, Zap, Sun, Moon } from 'lucide-react'
+import { useState } from 'react'
+import { Activity, Bell, BarChart2, Brain, Globe, Heart, LogOut, MapPin, Play, ShieldCheck, Settings, TrendingUp, Users, Wind, Zap, Sun, Moon, Menu, X } from 'lucide-react'
 import Logo from './Logo'
 
 const USER_NAV = [
@@ -30,24 +31,37 @@ const AUTHORITY_NAV = [
 
 export default function AppShell({ role, onSignOut, activeTab, onTabChange, theme, toggleTheme, children }) {
   const nav = role === 'admin' ? ADMIN_NAV : role === 'authority' ? AUTHORITY_NAV : USER_NAV
+  const [isOpen, setIsOpen] = useState(false)
+
+  const handleNavClick = (id) => {
+    onTabChange?.(id)
+    setIsOpen(false)
+  }
 
   return (
-    <div className="flex h-screen bg-darkBg text-white overflow-hidden">
+    <div className="flex h-screen bg-darkBg text-white overflow-hidden relative">
       {/* Ambient glows */}
       <div className="mesh-glow-blue" />
       <div className="mesh-glow-green" />
 
-      {/* Sidebar */}
-      <aside className="relative z-10 flex flex-col w-60 h-full border-r border-white/[0.06] bg-[#050a05] flex-shrink-0">
-        <div className="px-5 py-6 border-b border-white/[0.06]">
+      {/* Sidebar - responsive sliding drawer */}
+      <aside className={`fixed md:static inset-y-0 left-0 z-30 flex flex-col w-60 h-full border-r border-white/[0.06] bg-[#050a05] flex-shrink-0 transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+        <div className="px-5 py-6 border-b border-white/[0.06] flex items-center justify-between">
           <Logo />
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="md:hidden p-1 rounded-btn hover:bg-white/5 text-white/45 hover:text-white transition-all"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {nav.map(({ id, icon: Icon, label }) => (
             <button
               key={id}
-              onClick={() => onTabChange?.(id)}
+              onClick={() => handleNavClick(id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm font-medium transition-all duration-200 text-left
                 ${activeTab === id
                   ? 'bg-[#b2ccbf]/10 text-[#b2ccbf] border border-[#b2ccbf]/20'
@@ -89,10 +103,31 @@ export default function AppShell({ role, onSignOut, activeTab, onTabChange, them
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="relative z-10 flex-1 h-full overflow-y-auto">
-        {children}
-      </main>
+      {/* Backdrop for mobile drawer */}
+      {isOpen && (
+        <div 
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden"
+        />
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {/* Mobile Header Bar */}
+        <header className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] bg-[#050a05] md:hidden relative z-10 flex-shrink-0">
+          <Logo />
+          <button 
+            onClick={() => setIsOpen(true)}
+            className="p-2 rounded-btn bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white transition-all"
+          >
+            <Menu size={18} />
+          </button>
+        </header>
+
+        <main className="flex-1 h-full overflow-y-auto relative">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
