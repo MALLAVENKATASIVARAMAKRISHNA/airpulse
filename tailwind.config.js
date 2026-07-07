@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        darkBg:     '#060913',
+        darkBg:     '#c3ded3',
         darkCard:   'rgba(255,255,255,0.04)',
         brandBlue:  '#006aff',
         brandGreen: '#10d343',

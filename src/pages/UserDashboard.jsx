@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import mqtt from 'mqtt'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Line } from 'recharts'
 import { RefreshCw, MapPin, Wind } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import ForecastPage from './ForecastPage'
@@ -52,6 +52,53 @@ function formatTime(ts) {
   if (!ts) return '—'
   const t = /Z|[+-]\d{2}:\d{2}$/.test(ts) ? ts : ts + 'Z'
   return new Date(t).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
+}
+
+const forecast30Data = [
+  { day: 1, actual: 45, predicted: 50 },
+  { day: 2, actual: 65, predicted: 72 },
+  { day: 3, actual: 60, predicted: 58 },
+  { day: 4, actual: 55, predicted: 62 },
+  { day: 5, actual: 70, predicted: 68 },
+  { day: 6, actual: 68, predicted: 75 },
+  { day: 7, actual: 72, predicted: 70 },
+  { day: 8, actual: 95, predicted: 88 },
+  { day: 9, actual: 60, predicted: 64 },
+  { day: 10, actual: 62, predicted: 58 },
+  { day: 11, actual: 110, predicted: 102 },
+  { day: 12, actual: 105, predicted: 108 },
+  { day: 13, actual: 125, predicted: 115 },
+  { day: 14, actual: 55, predicted: 60 },
+  { day: 15, actual: 48, predicted: 42 },
+  { day: 16, actual: 45, predicted: 40 },
+  { day: 17, actual: 32, predicted: 35, showLabel: true },
+  { day: 18, actual: 58, predicted: 62 },
+  { day: 19, actual: 65, predicted: 70 },
+  { day: 20, actual: 75, predicted: 72 },
+  { day: 21, actual: 80, predicted: 82 },
+  { day: 22, actual: 68, predicted: 62 },
+  { day: 23, actual: 65, predicted: 60 },
+  { day: 24, actual: 58, predicted: 63 },
+  { day: 25, actual: 60, predicted: 55 },
+  { day: 26, actual: 62, predicted: 58 },
+  { day: 27, actual: 60, predicted: 65 }
+]
+
+function CustomPredictDot(props) {
+  const { cx, cy, payload } = props
+  if (payload.showLabel) {
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={5} fill="#00a2ff" stroke="#000" strokeWidth={2} />
+        <rect x={cx - 50} y={cy - 35} width={100} height={24} rx={4} fill="#0d0f14" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+        <text x={cx} y={cy - 20} fill="#ffffff" fontSize={10} fontWeight="bold" textAnchor="middle">
+          Predicted AQI 35
+        </text>
+        <line x1={cx} y1={cy - 5} x2={cx} y2={cy - 11} stroke="rgba(255,255,255,0.3)" strokeWidth={1} />
+      </g>
+    )
+  }
+  return <circle cx={cx} cy={cy} r={3} fill="#00a2ff" opacity={0.6} />
 }
 
 export default function UserDashboard({ profile, health, onSignOut, onReloadUser }) {
@@ -140,8 +187,8 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-white/40 uppercase tracking-widest">Live Air Intelligence</p>
-            <h1 className="text-2xl font-black text-white mt-1">
+            <p className="text-xs text-slate-600 uppercase tracking-widest font-semibold">Live Air Intelligence</p>
+            <h1 className="text-2xl font-black text-slate-800 mt-1">
               {profile.full_name?.split(' ')[0]}'s Dashboard
             </h1>
           </div>
@@ -157,10 +204,10 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
         </div>
 
         {/* Location bar */}
-        <div className="flex items-center gap-2 text-sm text-white/40">
+        <div className="flex items-center gap-2 text-sm text-slate-600 font-semibold">
           <MapPin size={14} className="text-brandCyan"/>
           <span>{reading?.location || '—'}, {reading?.district || 'Chennai'}</span>
-          <span className="ml-auto text-xs">Updated {formatTime(reading?.recorded_at)}</span>
+          <span className="ml-auto text-xs font-normal">Updated {formatTime(reading?.recorded_at)}</span>
         </div>
 
         {/* Danger banner */}
@@ -265,26 +312,49 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Trend chart */}
-          {chartData.length > 0 && (
-            <div className="glass-card p-6 flex flex-col justify-between">
-              <p className="text-xs text-white/40 uppercase tracking-wide mb-4">AQI Trend · Last {chartData.length} readings</p>
-              <ResponsiveContainer width="100%" height={160}>
-                <AreaChart data={chartData} margin={{ top:0, right:0, bottom:0, left:-20 }}>
-                  <defs>
-                    <linearGradient id="aqi-grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={meta.color} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={meta.color} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="time" tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false} interval={4}/>
-                  <YAxis tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false}/>
-                  <Tooltip contentStyle={{ background:'#060913', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
-                  <Area type="monotone" dataKey="aqi" stroke={meta.color} strokeWidth={2} fill="url(#aqi-grad)" dot={false}/>
-                </AreaChart>
-              </ResponsiveContainer>
+          {/* Superimposed AQI Prediction (30-Day Forecast) composed chart */}
+          <div className="glass-card p-6 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs text-white/40 uppercase tracking-wide">AQI Prediction (30-Day Forecast)</p>
+              <select defaultValue="Monthly" className="bg-white/5 border border-white/10 rounded-btn px-2.5 py-1 text-xs text-white outline-none focus:border-brandCyan/40">
+                <option value="Weekly" className="bg-[#0c0d12]">Weekly</option>
+                <option value="Monthly" className="bg-[#0c0d12]">Monthly</option>
+                <option value="Yearly" className="bg-[#0c0d12]">Yearly</option>
+              </select>
             </div>
-          )}
+            
+            <ResponsiveContainer width="100%" height={160}>
+              <ComposedChart data={forecast30Data} margin={{ top:25, right:5, bottom:0, left:-20 }}>
+                <defs>
+                  <linearGradient id="actual-aqi-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10d343" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10d343" stopOpacity={0.02}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="day" tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 250]} tick={{ fill:'rgba(255,255,255,0.3)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                <Tooltip contentStyle={{ background:'#0c0d12', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, color:'white' }}/>
+                
+                {/* Actual AQI Area Fill */}
+                <Area type="monotone" dataKey="actual" name="Actual AQI" stroke="#10d343" strokeWidth={1.5} fill="url(#actual-aqi-grad)" dot={false} />
+                
+                {/* Predicted AQI Line */}
+                <Line type="monotone" dataKey="predicted" name="Predicted AQI" stroke="#00a2ff" strokeWidth={2} dot={<CustomPredictDot />} activeDot={{ r: 6 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+            
+            {/* Custom Legend */}
+            <div className="flex items-center gap-4 mt-3 justify-center text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-0.5 bg-[#00a2ff]" />
+                <span className="text-white/50">Predicted AQI</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 bg-[#10d343]/30 border border-[#10d343]" />
+                <span className="text-white/50">Actual AQI</span>
+              </div>
+            </div>
+          </div>
 
           {/* Composition Pie Chart */}
           {reading && (
