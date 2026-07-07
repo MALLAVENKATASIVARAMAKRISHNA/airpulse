@@ -188,9 +188,10 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
 
   useEffect(() => {
     load()
-    const id = setInterval(load, 15000)
+    const intervalTime = live ? 15000 : 5000
+    const id = setInterval(load, intervalTime)
     return () => clearInterval(id)
-  }, [load])
+  }, [load, live])
 
   // MQTT — real-time updates from IoT Core for all nodes
   useEffect(() => {

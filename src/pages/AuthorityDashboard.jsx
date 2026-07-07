@@ -66,7 +66,11 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
     setNodeLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    const id = setInterval(load, 5000)
+    return () => clearInterval(id)
+  }, [])
 
   // Filter nodes & anomalies by authority's state and district jurisdiction
   const nodes = rawNodes.filter(n => 

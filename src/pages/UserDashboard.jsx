@@ -112,23 +112,38 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
 
   const loadHistory = useCallback(async () => {
     try {
-      const [nodes, hist] = await Promise.all([api.latestAll(), api.nodeReadings(profile.node_id)])
+      const [nodes, hist, preds] = await Promise.all([
+        api.latestAll(),
+        api.nodeReadings(profile.node_id),
+        api.predictions(profile.node_id)
+      ])
       const mine = (nodes||[]).find(n => n.node_id === profile.node_id)
       if (mine) {
         locationRef.current = { location: mine.location, district: mine.district }
         setReading(prev => prev ? { ...prev, ...locationRef.current } : mine)
       }
       setReadings((hist||[]).slice(0,24).reverse())
+      
+      // If WebSockets are not active, fall back to setting prediction data manually
+      if (!live && preds) {
+        const predictions = {
+          '6h': preds.find(x => x.horizon === '6h')?.predicted_aqi ?? null,
+          '24h': preds.find(x => x.horizon === '24h')?.predicted_aqi ?? null,
+          '48h': preds.find(x => x.horizon === '48h')?.predicted_aqi ?? null,
+        }
+        setMlData(prev => prev && JSON.stringify(prev.predictions) === JSON.stringify(predictions) ? prev : { predictions })
+      }
     } catch {}
     setLoading(false)
-  }, [profile.node_id])
+  }, [profile.node_id, live])
 
-  // Initial load + history refresh every 5 minutes
+  // Initial load + history refresh (5s fallback if WebSocket is not live, 5m otherwise)
   useEffect(() => {
     loadHistory()
-    const id = setInterval(loadHistory, 300000)
+    const intervalTime = live ? 300000 : 5000
+    const id = setInterval(loadHistory, intervalTime)
     return () => clearInterval(id)
-  }, [loadHistory])
+  }, [loadHistory, live])
 
   const [mlData, setMlData] = useState(null)
 
