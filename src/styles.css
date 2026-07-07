@@ -410,3 +410,30 @@
   border-color: rgba(194, 65, 12, 0.3) !important;
   background-color: rgba(194, 65, 12, 0.1) !important;
 }
+
+/* Yellow and Orange color overrides in Light Mode for lower intensity and higher contrast */
+:root:not(.dark) .text-yellow-400 {
+  color: #cba01a !important;
+}
+:root:not(.dark) .text-yellow-500 {
+  color: #cba01a !important;
+}
+:root:not(.dark) .text-orange-400 {
+  color: #c2410c !important;
+}
+:root:not(.dark) .text-orange-500 {
+  color: #c2410c !important;
+}
+:root:not(.dark) [class*="bg-yellow-400"] {
+  background-color: rgba(203, 160, 26, 0.15) !important;
+}
+:root:not(.dark) [class*="border-yellow-400"] {
+  border-color: rgba(203, 160, 26, 0.3) !important;
+}
+:root:not(.dark) [class*="bg-orange-500"] {
+  background-color: rgba(194, 65, 12, 0.12) !important;
+  color: #c2410c !important;
+}
+:root:not(.dark) [class*="border-orange-500"] {
+  border-color: rgba(194, 65, 12, 0.25) !important;
+}

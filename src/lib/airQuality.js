@@ -1,8 +1,9 @@
 export const AQI_ALERT_THRESHOLD = 200
 
 export function getAqiMeta(aqi = 0) {
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
   if (aqi <= 50) return { label: 'Good', color: '#56c596', tone: 'good' }
-  if (aqi <= 100) return { label: 'Moderate', color: '#f2c94c', tone: 'moderate' }
+  if (aqi <= 100) return { label: 'Moderate', color: isDark ? '#f2c94c' : '#cba01a', tone: 'moderate' }
   if (aqi <= 150) return { label: 'Sensitive', color: '#f2994a', tone: 'sensitive' }
   if (aqi <= 200) return { label: 'Unhealthy', color: '#eb5757', tone: 'unhealthy' }
   if (aqi <= 300) return { label: 'Very unhealthy', color: '#9b51e0', tone: 'very-unhealthy' }
