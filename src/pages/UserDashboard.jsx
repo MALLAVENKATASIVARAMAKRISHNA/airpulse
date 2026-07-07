@@ -85,20 +85,20 @@ const forecast30Data = [
 ]
 
 function CustomPredictDot(props) {
-  const { cx, cy, payload } = props
+  const { cx, cy, payload, color = '#10d343' } = props
   if (payload.showLabel) {
     return (
       <g>
-        <circle cx={cx} cy={cy} r={5} fill="#b2ccbf" stroke="#000" strokeWidth={2} />
-        <rect x={cx - 50} y={cy - 35} width={100} height={24} rx={4} fill="#1b1b1b" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
-        <text x={cx} y={cy - 20} fill="#ffffff" fontSize={10} fontWeight="bold" textAnchor="middle">
+        <circle cx={cx} cy={cy} r={5} fill={color} stroke="#000" strokeWidth={2} />
+        <rect x={cx - 50} y={cy - 35} width={100} height={24} rx={4} fill="var(--card-bg)" stroke="var(--card-border)" strokeWidth={1} />
+        <text x={cx} y={cy - 20} fill="var(--text-main)" fontSize={10} fontWeight="bold" textAnchor="middle">
           Predicted AQI 35
         </text>
-        <line x1={cx} y1={cy - 5} x2={cx} y2={cy - 11} stroke="rgba(255,255,255,0.3)" strokeWidth={1} />
+        <line x1={cx} y1={cy - 5} x2={cx} y2={cy - 11} stroke="var(--text-muted)" opacity={0.4} strokeWidth={1} />
       </g>
     )
   }
-  return <circle cx={cx} cy={cy} r={3} fill="#b2ccbf" opacity={0.6} />
+  return <circle cx={cx} cy={cy} r={3} fill={color} opacity={0.6} />
 }
 
 export default function UserDashboard({ profile, health, onSignOut, onReloadUser, theme, toggleTheme }) {
@@ -324,36 +324,21 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
             </div>
             
             <ResponsiveContainer width="100%" height={160}>
-              <ComposedChart data={forecast30Data} margin={{ top:25, right:5, bottom:0, left:-20 }}>
+              <AreaChart data={forecast30Data} margin={{ top:25, right:5, bottom:0, left:-20 }}>
                 <defs>
-                  <linearGradient id="actual-aqi-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10d343" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10d343" stopOpacity={0.02}/>
+                  <linearGradient id="forecast-aqi-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={meta.color} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={meta.color} stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="day" tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 250]} tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false}/>
                 <Tooltip contentStyle={{ background:'var(--card-bg)', border:'1px solid var(--card-border)', borderRadius:8, color:'var(--text-main)' }}/>
                 
-                {/* Actual AQI Area Fill */}
-                <Area type="monotone" dataKey="actual" name="Actual AQI" stroke="#10d343" strokeWidth={1.5} fill="url(#actual-aqi-grad)" dot={false} />
-                
-                {/* Predicted AQI Line */}
-                <Line type="monotone" dataKey="predicted" name="Predicted AQI" stroke="#b2ccbf" strokeWidth={2} dot={<CustomPredictDot />} activeDot={{ r: 6 }} />
-              </ComposedChart>
+                {/* Predicted AQI Trend Area Fill */}
+                <Area type="monotone" dataKey="predicted" name="Predicted AQI" stroke={meta.color} strokeWidth={2} fill="url(#forecast-aqi-grad)" dot={<CustomPredictDot color={meta.color} />} activeDot={{ r: 6 }} />
+              </AreaChart>
             </ResponsiveContainer>
-            
-            {/* Custom Legend */}
-            <div className="flex items-center gap-4 mt-3 justify-center text-xs">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-0.5 bg-[#b2ccbf]" />
-                <span className="text-white/50">Predicted AQI</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-[#10d343]/30 border border-[#10d343]" />
-                <span className="text-white/50">Actual AQI</span>
-              </div>
-            </div>
           </div>
 
           {/* Composition Pie Chart */}
