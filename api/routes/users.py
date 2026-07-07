@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel, EmailStr
 from database import query
-from auth import admin_only, hash_password
+from auth import admin_only, hash_password, get_current_user
 from typing import Optional
 
 router = APIRouter()
@@ -19,7 +19,7 @@ def get_users(current_user=Depends(admin_only)):
     """)
 
 @router.get('/count')
-def get_user_count(current_user=Depends(admin_only)):
+def get_user_count(current_user=Depends(get_current_user)):
     result = query("SELECT COUNT(*) as count FROM users WHERE role = 'user'", fetch='one')
     return {'count': result['count']}
 
