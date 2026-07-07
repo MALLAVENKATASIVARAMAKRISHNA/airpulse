@@ -69,21 +69,59 @@ def sub_aqi(c, bps):
             return int(((a_hi - a_lo) / (c_hi - c_lo)) * (c - c_lo) + a_lo)
     return min(500, int(c))
 
-def vary(base, pct=0.15):
-    return max(0, round(base + random.uniform(-base * pct, base * pct), 2))
+def get_time_factor(node_id):
+    import datetime, math
+    h = datetime.datetime.now().hour
+    
+    # Industrial area NODE001 runs 24/7 with steady baseline emissions and random process spikes
+    if node_id == "NODE001":
+        factor = 0.95 + 0.10 * math.sin((h - 14) * math.pi / 12)
+        if random.random() < 0.05:
+            factor *= 1.75
+        return factor
+
+    # Office and residential nodes follow daily traffic/rush-hour cycles
+    if 8 <= h <= 10:
+        factor = 1.35  # Morning office rush hour
+    elif 17 <= h <= 20:
+        factor = 1.45  # Evening home rush hour
+    elif 23 <= h or h <= 5:
+        factor = 0.55  # Night time quiet hours
+    else:
+        factor = 0.90 + 0.15 * math.sin((h - 12) * math.pi / 6)
+        
+    return factor
 
 def generate_and_insert(node_id, base):
+    tf = get_time_factor(node_id)
+    
+    def vary(val, pct=0.15):
+        return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
+
     override = sim.overrides.get(node_id, {})
 
-    pm25  = override.get('pm25',  vary(base['pm25']))
-    pm10  = override.get('pm10',  vary(base['pm10']))
-    co    = override.get('co',    vary(base['co'],    0.20))
-    no2   = override.get('no2',   vary(base['no2']))
-    ozone = override.get('ozone', vary(base['ozone']))
-    co2   = override.get('co2',   vary(base['co2'],   0.05))
-    voc   = override.get('voc',   vary(base['voc'],   0.20))
-    smoke = override.get('smoke', vary(base['smoke'], 0.20))
-    nh3   = round(random.uniform(1.0, 5.0), 2)
+    if node_id == "NODE001":
+        # Industrial node features
+        pm25  = override.get('pm25',  vary(base['pm25'], 0.10))
+        pm10  = override.get('pm10',  vary(base['pm10'] * 1.25, 0.10))
+        co    = override.get('co',    vary(base['co'], 0.15))
+        no2   = override.get('no2',   vary(base['no2'] * 1.15, 0.10))
+        ozone = override.get('ozone', vary(base['ozone'], 0.15))
+        co2   = override.get('co2',   vary(base['co2'] * 1.30, 0.05))
+        voc   = override.get('voc',   vary(base['voc'] * 1.40, 0.15))
+        smoke = override.get('smoke', vary(base['smoke'] * 1.50, 0.15))
+    else:
+        # Standard node scaling
+        pm25  = override.get('pm25',  vary(base['pm25']))
+        pm10  = override.get('pm10',  vary(base['pm10']))
+        co    = override.get('co',    vary(base['co'],    0.20))
+        no2   = override.get('no2',   vary(base['no2']))
+        ozone = override.get('ozone', vary(base['ozone']))
+        co2   = override.get('co2',   vary(base['co2'],   0.05))
+        voc   = override.get('voc',   vary(base['voc'],   0.20))
+        smoke = override.get('smoke', vary(base['smoke'], 0.20))
+
+    nh3   = round(random.uniform(1.0, 5.0) * tf, 2)
 
     subs = {
         'PM2.5': sub_aqi(pm25,  PM25_BP),

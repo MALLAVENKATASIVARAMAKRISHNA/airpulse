@@ -49,19 +49,63 @@ CAUSE_MAP = {
     "Ozone": "Photochemical reaction from sunlight and pollutants",
 }
 
+import datetime
+import math
+
+def get_time_factor(node_id):
+    h = datetime.datetime.now().hour
+    
+    # Industrial area NODE001 runs 24/7 with steady baseline emissions and random process spikes
+    if node_id == "NODE001":
+        # Flat diurnal wave (fluctuates between 0.95 and 1.1)
+        factor = 0.95 + 0.10 * math.sin((h - 14) * math.pi / 12)
+        # 5% chance of a temporary factory stack emissions release spike
+        if random.random() < 0.05:
+            factor *= 1.75
+        return factor
+
+    # Office and residential nodes follow daily traffic/rush-hour cycles
+    if 8 <= h <= 10:
+        factor = 1.35  # Morning office rush hour
+    elif 17 <= h <= 20:
+        factor = 1.45  # Evening home rush hour
+    elif 23 <= h or h <= 5:
+        factor = 0.55  # Night time quiet hours
+    else:
+        # Off-peak daytime variation
+        factor = 0.90 + 0.15 * math.sin((h - 12) * math.pi / 6)
+        
+    return factor
+
 def generate_reading(node):
     b = node["base"]
-    v = lambda base, spread: max(0, round(base + random.uniform(-spread, spread), 2))
+    node_id = node["node_id"]
+    tf = get_time_factor(node_id)
+    
+    v = lambda base, spread: max(0, round((base + random.uniform(-spread, spread)) * tf, 2))
 
-    pm25  = v(b["pm25"],  b["pm25"]  * 0.15)
-    pm10  = v(b["pm10"],  b["pm10"]  * 0.15)
-    co    = v(b["co"],    b["co"]    * 0.20)
-    no2   = v(b["no2"],   b["no2"]   * 0.15)
-    ozone = v(b["ozone"], b["ozone"] * 0.15)
-    co2   = v(b["co2"],   b["co2"]   * 0.05)
-    voc   = v(b["voc"],   b["voc"]   * 0.20)
-    smoke = v(b["smoke"], b["smoke"] * 0.20)
-    nh3   = round(random.uniform(1.0, 5.0), 2)
+    if node_id == "NODE001":
+        # Industrial Area: High PM10, CO2, VOCs, Smoke, and NO2 from stack emissions
+        pm25  = v(b["pm25"],  b["pm25"]  * 0.10)
+        pm10  = v(b["pm10"] * 1.25, b["pm10"] * 0.10)  # 25% higher PM10 (dust, ash)
+        co    = v(b["co"],    b["co"]    * 0.15)
+        no2   = v(b["no2"] * 1.15,  b["no2"]   * 0.10)  # 15% higher NO2 (combustion)
+        ozone = v(b["ozone"], b["ozone"] * 0.15)
+        co2   = v(b["co2"] * 1.30,  b["co2"]   * 0.05)  # 30% higher CO2 (ovens, boilers)
+        voc   = v(b["voc"] * 1.40,  b["voc"]   * 0.15)  # 40% higher VOCs (solvents, chemicals)
+        smoke = v(b["smoke"] * 1.50, b["smoke"] * 0.15)  # 50% higher Smoke
+    else:
+        # Residential / Commercial: Standard diurnal scaling
+        pm25  = v(b["pm25"],  b["pm25"]  * 0.15)
+        pm10  = v(b["pm10"],  b["pm10"]  * 0.15)
+        co    = v(b["co"],    b["co"]    * 0.20)
+        no2   = v(b["no2"],   b["no2"]   * 0.15)
+        ozone = v(b["ozone"], b["ozone"] * 0.15)
+        co2   = v(b["co2"],   b["co2"]   * 0.05)
+        voc   = v(b["voc"],   b["voc"]   * 0.20)
+        smoke = v(b["smoke"], b["smoke"] * 0.20)
+        
+    nh3   = round(random.uniform(1.0, 5.0) * tf, 2)
 
     sub_aqis = {
         "PM2.5": calc_sub_aqi(pm25,  PM25_BP),
