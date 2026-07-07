@@ -30,6 +30,9 @@ def build_token(user):
         'node_id':   user['node_id'],
         'full_name': user['full_name'],
         'email':     user['email'],
+        'state':     user.get('state'),
+        'district':  user.get('district'),
+        'must_change_password': user.get('must_change_password', False),
     })
 
 @router.post('/signup')
@@ -46,7 +49,7 @@ def signup(data: SignupRequest):
     user = query("""
         INSERT INTO users (full_name, email, password_hash, node_id, phone_number, location, role)
         VALUES (%s, %s, %s, %s, %s, %s, 'user')
-        RETURNING user_id, full_name, email, node_id, location, role
+        RETURNING user_id, full_name, email, node_id, location, role, state, district, must_change_password
     """, (data.full_name, data.email, hashed, data.node_id, data.phone_number, node['location']), fetch='one')
 
     return {'token': build_token(user), 'user': dict(user)}
@@ -61,11 +64,13 @@ def login(data: LoginRequest):
     return {'token': build_token(user), 'user': {
         'user_id': user['user_id'], 'role': user['role'],
         'node_id': user['node_id'], 'full_name': user['full_name'], 'email': user['email'],
+        'state': user.get('state'), 'district': user.get('district'),
+        'must_change_password': user.get('must_change_password', False),
     }}
 
 @router.get('/me')
 def me(current_user=Depends(get_current_user)):
-    user = query('SELECT user_id, full_name, email, node_id, role, location FROM users WHERE user_id = %s',
+    user = query('SELECT user_id, full_name, email, node_id, role, location, state, district, must_change_password FROM users WHERE user_id = %s',
                  (current_user['user_id'],), fetch='one')
     if not user:
         raise HTTPException(404, 'User not found.')
@@ -105,6 +110,25 @@ def setup_admin(data: SetupRequest):
         RETURNING user_id, full_name, email, node_id, location, role
     """, (data.full_name, data.email, hashed), fetch='one')
     return {'token': build_token(user), 'user': dict(user)}
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.post('/change-password')
+def change_password(data: ChangePasswordRequest, current_user=Depends(get_current_user)):
+    user = query('SELECT password_hash FROM users WHERE user_id = %s', (current_user['user_id'],), fetch='one')
+    if not user or not user['password_hash']:
+        raise HTTPException(401, 'User not found.')
+    if not verify_password(data.current_password, user['password_hash']):
+        raise HTTPException(400, 'Incorrect current password.')
+    hashed = hash_password(data.new_password)
+    query("""
+        UPDATE users
+        SET password_hash = %s, must_change_password = FALSE
+        WHERE user_id = %s
+    """, (hashed, current_user['user_id']), fetch='none')
+    return {'ok': True, 'message': 'Password changed successfully.'}
 
 @router.get('/conditions')
 def get_conditions():

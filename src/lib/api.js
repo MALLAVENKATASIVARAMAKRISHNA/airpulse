@@ -51,6 +51,7 @@ export const api = {
   updateProfile: (data)         => req('PUT',  '/api/auth/profile', data),
   forgotPassword: (email)       => req('POST', '/api/auth/forgot-password', { email }),
   resetPassword:  (token, password) => req('POST', '/api/auth/reset-password', { token, password }),
+  changePassword: (current_password, new_password) => req('POST', '/api/auth/change-password', { current_password, new_password }),
 
   // Health
   conditions: ()     => req('GET',  '/api/auth/conditions'),
@@ -75,6 +76,7 @@ export const api = {
   users:          () => req('GET', '/api/users/'),
   userCount:      () => req('GET', '/api/users/count'),
   updateUserRole: (userId, role) => req('PATCH', `/api/users/${userId}/role`, { role }),
+  createAuthority: (data) => req('POST', '/api/users/authority', data),
 
   // Readings (admin)
   insertReading: (data) => req('POST', '/api/readings/', data),

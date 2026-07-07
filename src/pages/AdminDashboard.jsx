@@ -47,6 +47,11 @@ export default function AdminDashboard({ profile, onSignOut }) {
   const [nodeReadings, setNodeReadings] = useState([])
   const [nodeLoading,  setNodeLoading]  = useState(false)
 
+  const [userSubTab, setUserSubTab] = useState('users') // 'users' or 'authority'
+  const [showAddAuth, setShowAddAuth] = useState(false)
+  const [authForm, setAuthForm] = useState({ fullName: '', email: '', phone: '', state: '', district: '' })
+  const [error, setError] = useState('')
+
   const load = useCallback(async () => {
     try {
       const [n, uc, s, a] = await Promise.all([api.latestAll(), api.userCount(), api.simStatus(), api.anomalies()])
@@ -61,6 +66,26 @@ export default function AdminDashboard({ profile, onSignOut }) {
   const loadUsers = useCallback(async () => {
     try { setUsers(await api.users()||[]) } catch {}
   }, [])
+
+  async function handleAddAuthority(e) {
+    e.preventDefault()
+    setLoading(true); setError('')
+    try {
+      await api.createAuthority({
+        full_name: authForm.fullName,
+        email: authForm.email,
+        phone_number: authForm.phone,
+        state: authForm.state,
+        district: authForm.district
+      })
+      setShowAddAuth(false)
+      setAuthForm({ fullName: '', email: '', phone: '', state: '', district: '' })
+      await loadUsers()
+    } catch(err) {
+      alert(err.message || 'Failed to create authority.')
+    }
+    setLoading(false)
+  }
 
   const selectNodeDetail = async (node) => {
     setSelectedNode(node)
@@ -396,60 +421,224 @@ export default function AdminDashboard({ profile, onSignOut }) {
       )
     }
 
-    if (tab === 'users') return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-black text-white flex items-center gap-2"><Users size={22} className="text-brandCyan"/> Users ({userCount})</h1>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"/>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
-              className="bg-white/5 border border-white/10 rounded-btn pl-8 pr-4 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-brandCyan/40 w-56"/>
+    if (tab === 'users') {
+      const normalUsers = filteredUsers.filter(u => u.role === 'user')
+      const authorityUsers = filteredUsers.filter(u => u.role === 'authority')
+      
+      const states = [...new Set(nodes.map(n => n.state).filter(Boolean))]
+      const districts = authForm.state 
+        ? [...new Set(nodes.filter(n => n.state === authForm.state).map(n => n.district).filter(Boolean))] 
+        : []
+
+      return (
+        <div className="p-8 max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-black text-white flex items-center gap-2"><Users size={22} className="text-brandCyan"/> Users & Authorities</h1>
+            <div className="flex items-center gap-3">
+              {userSubTab === 'authority' && (
+                <button onClick={() => { setShowAddAuth(true); setError('') }}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-400 rounded-btn text-xs font-semibold hover:bg-purple-500/30 transition-all">
+                  <Plus size={13}/> Add Authority
+                </button>
+              )}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"/>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"
+                  className="bg-white/5 border border-white/10 rounded-btn pl-8 pr-4 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-brandCyan/40 w-56"/>
+              </div>
+            </div>
           </div>
+
+          {/* Sub-tab navigation */}
+          <div className="flex border-b border-white/[0.06] mb-6">
+            <button onClick={() => setUserSubTab('users')}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-all
+                ${userSubTab === 'users' ? 'border-brandCyan text-brandCyan' : 'border-transparent text-white/40 hover:text-white/70'}`}>
+              Users ({normalUsers.length})
+            </button>
+            <button onClick={() => setUserSubTab('authority')}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-all
+                ${userSubTab === 'authority' ? 'border-brandCyan text-brandCyan' : 'border-transparent text-white/40 hover:text-white/70'}`}>
+              Authorities ({authorityUsers.length})
+            </button>
+          </div>
+
+          <p className="text-xs text-white/30 mb-4">
+            {userSubTab === 'users' 
+              ? 'View all registered residents and grant them authority dashboard access.'
+              : 'Manage city authority profiles, assign state/district jurisdictions, and monitor setup status.'}
+          </p>
+
+          {userSubTab === 'users' ? (
+            <div className="glass-card overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.06]">
+                    {['Name','Email','Node','Phone','Health Condition','Action'].map(h=>(
+                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {normalUsers.map(u=>(
+                    <tr key={u.user_id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                      <td className="px-4 py-3 font-medium text-white">{u.full_name}</td>
+                      <td className="px-4 py-3 text-white/60 text-xs">{u.email}</td>
+                      <td className="px-4 py-3 text-white/40 text-xs">{u.location || '—'}</td>
+                      <td className="px-4 py-3 text-white/40 text-xs">{u.phone_number || '—'}</td>
+                      <td className="px-4 py-3 text-white/40 text-xs">
+                        {u.condition_name ? `${u.condition_name} (Lvl ${u.severity_level})` : 'None'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={()=>updateRole(u.user_id,'authority')}
+                          className="flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-all">
+                          <Shield size={10}/> Make Authority
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {normalUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-white/20 text-xs">No users found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="glass-card overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.06]">
+                    {['Name','Email','Phone','State','District','Password','Action'].map(h=>(
+                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {authorityUsers.map(u=>(
+                    <tr key={u.user_id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                      <td className="px-4 py-3 font-medium text-white">{u.full_name}</td>
+                      <td className="px-4 py-3 text-white/60 text-xs">{u.email}</td>
+                      <td className="px-4 py-3 text-white/40 text-xs">{u.phone_number || '—'}</td>
+                      <td className="px-4 py-3 text-white/40 text-xs">{u.state || '—'}</td>
+                      <td className="px-4 py-3 text-white/40 text-xs">{u.district || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border
+                          ${u.must_change_password
+                            ?'text-orange-400 border-orange-400/30 bg-orange-400/10'
+                            :'text-green-400 border-green-400/30 bg-green-400/10'}`}>
+                          {u.must_change_password ? 'Default' : 'Changed'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={()=>updateRole(u.user_id,'user')}
+                          className="flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all">
+                          Revoke
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {authorityUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-white/20 text-xs">No authorities found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Add Authority Modal Overlay */}
+          {showAddAuth && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="glass-card max-w-md w-full p-6 space-y-4 animate-fadeIn">
+                <h2 className="text-lg font-black text-white flex items-center gap-2">
+                  <Shield size={18} className="text-purple-400"/> Add New Authority
+                </h2>
+                <p className="text-xs text-white/40">
+                  Create an authority profile. The default login password will be <code className="text-purple-400 font-mono">authority@123</code>.
+                </p>
+                
+                <form onSubmit={handleAddAuthority} className="space-y-3.5">
+                  {/* Name */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Full Name</label>
+                    <input type="text" placeholder="e.g. Inspector Rajan" required
+                      value={authForm.fullName} onChange={e => setAuthForm(p=>({...p, fullName: e.target.value}))}
+                      className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Email Address</label>
+                    <input type="email" placeholder="e.g. rajan@authority.gov" required
+                      value={authForm.email} onChange={e => setAuthForm(p=>({...p, email: e.target.value}))}
+                      className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">Phone Number</label>
+                    <input type="tel" placeholder="10-digit mobile number" required
+                      value={authForm.phone} onChange={e => setAuthForm(p=>({...p, phone: e.target.value}))}
+                      className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                  </div>
+
+                  {/* State / District Jurisdiction selection */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">State Jurisdiction</label>
+                      {states.length > 0 ? (
+                        <select required value={authForm.state}
+                          onChange={e => setAuthForm(p=>({...p, state: e.target.value, district: ''}))}
+                          className="w-full bg-[#060913] border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40">
+                          <option value="">Select State</option>
+                          {states.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      ) : (
+                        <input type="text" placeholder="State" required
+                          value={authForm.state} onChange={e => setAuthForm(p=>({...p, state: e.target.value}))}
+                          className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <label className="text-[10px] font-semibold text-white/50 uppercase block mb-1">District Jurisdiction</label>
+                      {states.length > 0 ? (
+                        <select required value={authForm.district}
+                          onChange={e => setAuthForm(p=>({...p, district: e.target.value}))}
+                          disabled={!authForm.state}
+                          className="w-full bg-[#060913] border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40 disabled:opacity-40">
+                          <option value="">Select District</option>
+                          {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      ) : (
+                        <input type="text" placeholder="District" required
+                          value={authForm.district} onChange={e => setAuthForm(p=>({...p, district: e.target.value}))}
+                          className="w-full bg-white/5 border border-white/10 rounded-btn px-3 py-2 text-sm text-white outline-none focus:border-brandCyan/40"/>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Modal Buttons */}
+                  <div className="flex justify-end gap-2 pt-3">
+                    <button type="button" onClick={() => { setShowAddAuth(false); setError('') }}
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-btn text-xs font-semibold transition-all">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={loading}
+                      className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-400 hover:bg-purple-500/30 rounded-btn text-xs font-semibold transition-all disabled:opacity-50">
+                      {loading ? 'Adding...' : 'Create Account'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
-        <p className="text-xs text-white/30 mb-4">Grant Authority access to let a user view the city-wide Authority Dashboard.</p>
-        <div className="glass-card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.06]">
-                {['Name','Email','Node','Role','Action'].map(h=>(
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map(u=>(
-                <tr key={u.user_id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3 font-medium text-white">{u.full_name}</td>
-                  <td className="px-4 py-3 text-white/60 text-xs">{u.email}</td>
-                  <td className="px-4 py-3 text-white/40 text-xs">{u.node_id}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border
-                      ${u.role==='authority'
-                        ?'text-purple-400 border-purple-400/30 bg-purple-400/10'
-                        :'text-brandCyan border-brandCyan/30 bg-brandCyan/10'}`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.role === 'authority' ? (
-                      <button onClick={()=>updateRole(u.user_id,'user')}
-                        className="flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-all">
-                        Revoke
-                      </button>
-                    ) : (
-                      <button onClick={()=>updateRole(u.user_id,'authority')}
-                        className="flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-all">
-                        <Shield size={10}/> Make Authority
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )
+      )
+    }
 
     if (tab === 'simulation') return (
       <div className="p-8 max-w-4xl mx-auto space-y-6">

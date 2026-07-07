@@ -5,6 +5,7 @@ import AuthorityDashboard from './pages/AuthorityDashboard'
 import AuthPage from './pages/AuthPage'
 import HealthOnboarding from './pages/HealthOnboarding'
 import UserDashboard from './pages/UserDashboard'
+import FirstTimePasswordChange from './pages/FirstTimePasswordChange'
 import { api } from './lib/api'
 
 export default function App() {
@@ -60,6 +61,24 @@ export default function App() {
 
   if (loading) return <LoadingScreen />
   if (!user)   return <AuthPage onLogin={handleLogin} />
+
+  if (user.must_change_password) {
+    return (
+      <FirstTimePasswordChange
+        profile={user}
+        onSignOut={signOut}
+        onComplete={async () => {
+          try {
+            const u = await api.me()
+            setUser(u)
+            api.setUser(u)
+          } catch (_) {
+            signOut()
+          }
+        }}
+      />
+    )
+  }
 
   if (user.role === 'admin')
     return <AdminDashboard profile={user} onSignOut={signOut} />
