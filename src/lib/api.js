@@ -1,11 +1,32 @@
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-function getToken()  { return localStorage.getItem('ap_token') }
-function setToken(t) { localStorage.setItem('ap_token', t) }
-function clearToken(){ localStorage.removeItem('ap_token') }
-function getUser()   { return JSON.parse(localStorage.getItem('ap_user') || 'null') }
-function setUser(u)  { localStorage.setItem('ap_user', JSON.stringify(u)) }
-function clearUser() { localStorage.removeItem('ap_user') }
+function getToken()  { return localStorage.getItem('ap_token') || sessionStorage.getItem('ap_token') }
+function setToken(t, remember = true) {
+  if (remember) {
+    localStorage.setItem('ap_token', t)
+  } else {
+    sessionStorage.setItem('ap_token', t)
+  }
+}
+function clearToken(){
+  localStorage.removeItem('ap_token')
+  sessionStorage.removeItem('ap_token')
+}
+function getUser()   {
+  const val = localStorage.getItem('ap_user') || sessionStorage.getItem('ap_user')
+  return JSON.parse(val || 'null')
+}
+function setUser(u, remember = true)  {
+  if (remember) {
+    localStorage.setItem('ap_user', JSON.stringify(u))
+  } else {
+    sessionStorage.setItem('ap_user', JSON.stringify(u))
+  }
+}
+function clearUser() {
+  localStorage.removeItem('ap_user')
+  sessionStorage.removeItem('ap_user')
+}
 
 async function req(method, path, body) {
   const token = getToken()
@@ -28,6 +49,8 @@ export const api = {
   signup:     (data)            => req('POST', '/api/auth/signup', data),
   me:         ()                => req('GET',  '/api/auth/me'),
   updateProfile: (data)         => req('PUT',  '/api/auth/profile', data),
+  forgotPassword: (email)       => req('POST', '/api/auth/forgot-password', { email }),
+  resetPassword:  (token, password) => req('POST', '/api/auth/reset-password', { token, password }),
 
   // Health
   conditions: ()     => req('GET',  '/api/auth/conditions'),

@@ -17,30 +17,67 @@ export default function AuthPage({ onLogin }) {
   const [nodes, setNodes]     = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
+  const [success, setSuccess] = useState('')
+  const [debugLink, setDebugLink] = useState('')
   const [showPw, setShowPw]   = useState(false)
+  const [remember, setRemember] = useState(true)
+  const [resetToken, setResetToken] = useState(null)
   const [form, setForm]       = useState({ fullName: '', email: '', password: '', nodeId: '', phone: '' })
 
   useEffect(() => {
+    // 1. Fetch nodes for signup location dropdown
     api.nodes().then(d => {
       if (d?.length) {
         setNodes(d)
         setForm(f => ({ ...f, nodeId: d[0].node_id }))
       }
     }).catch(() => {})
+
+    // 2. Parse URL for reset_token
+    const params = new URLSearchParams(window.location.search)
+    const tok = params.get('reset_token')
+    if (tok) {
+      setResetToken(tok)
+      setMode('reset')
+    }
   }, [])
 
   function update(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
   async function submit(e) {
     e.preventDefault()
-    setLoading(true); setError('')
+    setLoading(true); setError(''); setSuccess(''); setDebugLink('')
     try {
-      const res = mode === 'login'
-        ? await api.login(form.email, form.password)
-        : await api.signup({ full_name: form.fullName, email: form.email, password: form.password, node_id: form.nodeId, phone_number: form.phone })
-      api.setToken(res.token)
-      api.setUser(res.user)
-      onLogin(res.token, res.user)
+      if (mode === 'login') {
+        const res = await api.login(form.email, form.password)
+        onLogin(res.token, res.user, remember)
+      } else if (mode === 'signup') {
+        const res = await api.signup({
+          full_name: form.fullName,
+          email: form.email,
+          password: form.password,
+          node_id: form.nodeId,
+          phone_number: form.phone
+        })
+        onLogin(res.token, res.user, true)
+      } else if (mode === 'forgot') {
+        const res = await api.forgotPassword(form.email)
+        setSuccess(res.message)
+        if (res.debug_link) {
+          setDebugLink(res.debug_link)
+        }
+      } else if (mode === 'reset') {
+        await api.resetPassword(resetToken, form.password)
+        setSuccess('Password reset successful! Redirecting to sign in...')
+        setTimeout(() => {
+          // Clear query params and go to login
+          window.history.replaceState(null, '', window.location.pathname)
+          setResetToken(null)
+          setSuccess('')
+          setMode('login')
+          update('password', '')
+        }, 3000)
+      }
     } catch (err) {
       setError(friendlyError(err.message))
     }
@@ -75,15 +112,33 @@ export default function AuthPage({ onLogin }) {
         </div>
 
         <div className="glass-card p-8">
-          <div className="flex bg-white/5 rounded-btn p-1 mb-6">
-            {['login','signup'].map(m => (
-              <button key={m} onClick={() => { setMode(m); setError('') }}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-[10px] transition-all capitalize
-                  ${mode === m ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}>
-                {m === 'login' ? 'Sign In' : 'Sign Up'}
-              </button>
-            ))}
-          </div>
+          {/* Header toggles for sign-in/sign-up */}
+          {(mode === 'login' || mode === 'signup') && (
+            <div className="flex bg-white/5 rounded-btn p-1 mb-6">
+              {['login','signup'].map(m => (
+                <button key={m} onClick={() => { setMode(m); setError(''); setSuccess('') }}
+                  className={`flex-1 py-2.5 text-sm font-semibold rounded-[10px] transition-all capitalize
+                    ${mode === m ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}>
+                  {m === 'login' ? 'Sign In' : 'Sign Up'}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Reset Page headers */}
+          {mode === 'forgot' && (
+            <div className="mb-6">
+              <h2 className="text-lg font-black text-white">Reset Password</h2>
+              <p className="text-xs text-white/40 mt-1">Enter your registered email below to receive a secure reset link.</p>
+            </div>
+          )}
+
+          {mode === 'reset' && (
+            <div className="mb-6">
+              <h2 className="text-lg font-black text-white">Choose New Password</h2>
+              <p className="text-xs text-white/40 mt-1">Enter a strong, secure password for your account.</p>
+            </div>
+          )}
 
           <form onSubmit={submit} className="space-y-4">
             {mode === 'signup' && (
@@ -103,28 +158,68 @@ export default function AuthPage({ onLogin }) {
                 </InputField>
               </>
             )}
-            <InputField label="Email Address" icon={<Mail size={15}/>}>
-              <input type="email" placeholder="you@example.com" value={form.email}
-                onChange={e => update('email', e.target.value)} required className="ap-input pl-9"/>
-            </InputField>
-            <InputField label="Password" icon={<Lock size={15}/>}>
-              <div className="relative">
-                <input type={showPw ? 'text' : 'password'} placeholder="Minimum 6 characters"
-                  value={form.password} onChange={e => update('password', e.target.value)}
-                  required className="ap-input pl-9 pr-10"/>
-                <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
-                  {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
+
+            {(mode === 'login' || mode === 'signup' || mode === 'forgot') && (
+              <InputField label="Email Address" icon={<Mail size={15}/>}>
+                <input type="email" placeholder="you@example.com" value={form.email}
+                  onChange={e => update('email', e.target.value)} required className="ap-input pl-9"/>
+              </InputField>
+            )}
+
+            {(mode === 'login' || mode === 'signup' || mode === 'reset') && (
+              <InputField label={mode === 'reset' ? 'New Password' : 'Password'} icon={<Lock size={15}/>}>
+                <div className="relative">
+                  <input type={showPw ? 'text' : 'password'} placeholder="Minimum 6 characters"
+                    value={form.password} onChange={e => update('password', e.target.value)}
+                    required className="ap-input pl-9 pr-10"/>
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+                    {showPw ? <EyeOff size={15}/> : <Eye size={15}/>}
+                  </button>
+                </div>
+              </InputField>
+            )}
+
+            {/* Remember Me and Forgot Password bar */}
+            {mode === 'login' && (
+              <div className="flex items-center justify-between text-xs text-white/50 pt-1 pb-2">
+                <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                  <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
+                    className="rounded bg-white/5 border-white/10 text-brandCyan focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"/>
+                  Remember me
+                </label>
+                <button type="button" onClick={() => { setMode('forgot'); setError(''); setSuccess('') }}
+                  className="text-brandCyan hover:underline">
+                  Forgot Password?
                 </button>
               </div>
-            </InputField>
+            )}
 
             {error && <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-btn px-3 py-2">{error}</p>}
+            {success && <p className="text-brandGreen text-sm bg-brandGreen/10 border border-brandGreen/20 rounded-btn px-3 py-2">{success}</p>}
+
+            {debugLink && (
+              <div className="p-3 bg-brandBlue/10 border border-brandBlue/20 rounded-btn text-xs text-brandCyan leading-normal">
+                <p className="font-bold mb-1">🔧 Testing Link (Local Debug):</p>
+                <a href={debugLink} className="underline break-all">{debugLink}</a>
+              </div>
+            )}
 
             <button type="submit" disabled={loading}
               className="w-full py-3.5 rounded-btn font-bold text-sm brand-gradient text-white mt-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-brandBlue/20 disabled:opacity-50">
-              {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
+              {loading ? 'Please wait…' : 
+                mode === 'login' ? 'Sign In' : 
+                mode === 'signup' ? 'Create Account' : 
+                mode === 'forgot' ? 'Send Reset Link' : 'Reset Password'}
             </button>
+
+            {/* Footer switcher for Forgot and Reset modes */}
+            {(mode === 'forgot' || mode === 'reset') && (
+              <button type="button" onClick={() => { setMode('login'); setError(''); setSuccess(''); setDebugLink('') }}
+                className="w-full text-center text-xs text-white/40 hover:text-white transition-colors pt-2 block">
+                ← Back to Sign In
+              </button>
+            )}
           </form>
         </div>
       </div>

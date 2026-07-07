@@ -1,3 +1,5 @@
+import secrets
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from database import query
@@ -149,3 +151,54 @@ def get_health(current_user=Depends(get_current_user)):
         WHERE uh.user_id = %s
     """, (current_user['user_id'],), fetch='one')
     return dict(row) if row else None
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+@router.post('/forgot-password')
+def forgot_password(data: ForgotPasswordRequest):
+    user = query('SELECT user_id FROM users WHERE email = %s', (data.email,), fetch='one')
+    if not user:
+        return {'ok': True, 'message': 'If the email is registered, a password reset link has been sent.'}
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    query("""
+        UPDATE users
+        SET reset_token = %s, reset_token_expires_at = %s
+        WHERE user_id = %s
+    """, (token, expires_at, user['user_id']), fetch='none')
+    # Generate and print the reset link for development/testing ease
+    reset_url = f"http://localhost:5173/?reset_token={token}"
+    print("\n" + "="*50)
+    print(f"PASSWORD RESET LINK FOR: {data.email}")
+    print(f"URL: {reset_url}")
+    print("="*50 + "\n")
+    return {
+        'ok': True,
+        'message': 'If the email is registered, a password reset link has been sent.',
+        'debug_link': reset_url
+    }
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+@router.post('/reset-password')
+def reset_password(data: ResetPasswordRequest):
+    user = query("""
+        SELECT user_id, reset_token_expires_at
+        FROM users
+        WHERE reset_token = %s
+    """, (data.token,), fetch='one')
+    if not user:
+        raise HTTPException(status_code=400, detail='Invalid password reset token.')
+    expires_at = user['reset_token_expires_at']
+    if expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail='Password reset token has expired.')
+    hashed = hash_password(data.password)
+    query("""
+        UPDATE users
+        SET password_hash = %s, reset_token = NULL, reset_token_expires_at = NULL
+        WHERE user_id = %s
+    """, (hashed, user['user_id']), fetch='none')
+    return {'ok': True, 'message': 'Password has been reset successfully.'}

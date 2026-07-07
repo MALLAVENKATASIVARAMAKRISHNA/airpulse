@@ -31,9 +31,9 @@ export default function App() {
       .catch(() => { api.clearToken(); api.clearUser(); setUser(null); setLoading(false) })
   }, [loadHealth])
 
-  function handleLogin(token, u) {
-    api.setToken(token)
-    api.setUser(u)
+  function handleLogin(token, u, remember = true) {
+    api.setToken(token, remember)
+    api.setUser(u, remember)
     if (u.role === 'user') {
       setLoading(true)
     }
