@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Globe, MapPin, Zap, RefreshCw, LogOut, ShieldAlert, Users, Activity } from 'lucide-react'
+import { Globe, MapPin, Zap, RefreshCw, LogOut, ShieldAlert, Users, Activity, Sun, Moon } from 'lucide-react'
 import Logo from '../components/Logo'
 import { api } from '../lib/api'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie } from 'recharts'
@@ -34,7 +34,7 @@ function formatTime(ts) {
   return new Date(t).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
 }
 
-export default function AuthorityDashboard({ profile, onSignOut }) {
+export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTheme }) {
   const [tab,       setTab]       = useState('overview')
   const [rawNodes,  setRawNodes]  = useState([])
   const [rawAnomalies, setRawAnomalies] = useState([])
@@ -111,6 +111,10 @@ export default function AuthorityDashboard({ profile, onSignOut }) {
               📍 {profile.district || 'All Districts'}, {profile.state || 'All States'}
             </p>
           </div>
+          <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all">
+            {theme === 'dark' ? <Sun size={17}/> : <Moon size={17}/>}
+            <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
           <button onClick={onSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all">
             <LogOut size={17}/> Sign out
           </button>

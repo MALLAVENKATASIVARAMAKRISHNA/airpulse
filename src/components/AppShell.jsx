@@ -1,4 +1,4 @@
-import { Activity, Bell, BarChart2, Brain, Globe, Heart, LogOut, MapPin, Play, ShieldCheck, Settings, TrendingUp, Users, Wind, Zap } from 'lucide-react'
+import { Activity, Bell, BarChart2, Brain, Globe, Heart, LogOut, MapPin, Play, ShieldCheck, Settings, TrendingUp, Users, Wind, Zap, Sun, Moon } from 'lucide-react'
 import Logo from './Logo'
 
 const USER_NAV = [
@@ -28,7 +28,7 @@ const AUTHORITY_NAV = [
   { id: 'alerts',    icon: Bell,      label: 'Alert Centre'  },
 ]
 
-export default function AppShell({ role, onSignOut, activeTab, onTabChange, children }) {
+export default function AppShell({ role, onSignOut, activeTab, onTabChange, theme, toggleTheme, children }) {
   const nav = role === 'admin' ? ADMIN_NAV : role === 'authority' ? AUTHORITY_NAV : USER_NAV
 
   return (
@@ -73,6 +73,13 @@ export default function AppShell({ role, onSignOut, activeTab, onTabChange, chil
               {role === 'admin' ? 'Admin' : role === 'authority' ? 'Authority' : 'Resident'}
             </span>
           </div>
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all"
+          >
+            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
           <button
             onClick={onSignOut}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all"

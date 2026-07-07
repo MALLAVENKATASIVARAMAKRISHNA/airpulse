@@ -59,6 +59,20 @@ export default function App() {
     setHealth(null)
   }
 
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme === 'dark') {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+
   if (loading) return <LoadingScreen />
   if (!user)   return <AuthPage onLogin={handleLogin} />
 
@@ -81,10 +95,10 @@ export default function App() {
   }
 
   if (user.role === 'admin')
-    return <AdminDashboard profile={user} onSignOut={signOut} />
+    return <AdminDashboard profile={user} onSignOut={signOut} theme={theme} toggleTheme={toggleTheme} />
 
   if (user.role === 'authority')
-    return <AuthorityDashboard profile={user} onSignOut={signOut} />
+    return <AuthorityDashboard profile={user} onSignOut={signOut} theme={theme} toggleTheme={toggleTheme} />
 
   if (!health)
     return <HealthOnboarding profile={user} conditions={conditions} onComplete={async () => {
@@ -92,5 +106,5 @@ export default function App() {
       setHealth(h); setConditions(c)
     }} />
 
-  return <UserDashboard profile={user} health={health} onSignOut={signOut} onReloadUser={handleReloadUser} />
+  return <UserDashboard profile={user} health={health} onSignOut={signOut} onReloadUser={handleReloadUser} theme={theme} toggleTheme={toggleTheme} />
 }

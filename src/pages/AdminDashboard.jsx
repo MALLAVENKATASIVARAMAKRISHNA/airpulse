@@ -29,7 +29,7 @@ function formatTime(ts) {
   return new Date(t).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
 }
 
-export default function AdminDashboard({ profile, onSignOut }) {
+export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme }) {
   const [tab,       setTab]       = useState('overview')
   const [nodes,     setNodes]     = useState([])
   const [users,     setUsers]     = useState([])
@@ -907,7 +907,7 @@ export default function AdminDashboard({ profile, onSignOut }) {
   }
 
   return (
-    <AppShell role="admin" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab}>
+    <AppShell role="admin" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab} theme={theme} toggleTheme={toggleTheme}>
       {renderContent()}
     </AppShell>
   )

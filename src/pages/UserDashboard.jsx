@@ -101,7 +101,7 @@ function CustomPredictDot(props) {
   return <circle cx={cx} cy={cy} r={3} fill="#b2ccbf" opacity={0.6} />
 }
 
-export default function UserDashboard({ profile, health, onSignOut, onReloadUser }) {
+export default function UserDashboard({ profile, health, onSignOut, onReloadUser, theme, toggleTheme }) {
   const [tab,      setTab]      = useState('overview')
   const [reading,  setReading]  = useState(null)
   const [readings, setReadings] = useState([])
@@ -415,7 +415,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
   }
 
   return (
-    <AppShell role="user" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab}>
+    <AppShell role="user" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab} theme={theme} toggleTheme={toggleTheme}>
       {renderContent()}
     </AppShell>
   )
