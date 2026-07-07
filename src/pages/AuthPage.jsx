@@ -152,9 +152,9 @@ export default function AuthPage({ onLogin }) {
                     {nodes.map(n => <option key={n.node_id} value={n.node_id}>{n.location}, {n.district}</option>)}
                   </select>
                 </InputField>
-                <InputField label="Phone (Optional)" icon={<Phone size={15}/>}>
+                <InputField label="Phone Number" icon={<Phone size={15}/>}>
                   <input type="tel" placeholder="Your phone number" value={form.phone}
-                    onChange={e => update('phone', e.target.value)} className="ap-input pl-9"/>
+                    onChange={e => update('phone', e.target.value)} required className="ap-input pl-9"/>
                 </InputField>
               </>
             )}

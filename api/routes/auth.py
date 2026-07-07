@@ -12,7 +12,7 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: str
     node_id: str
-    phone_number: str = ''
+    phone_number: str
 
 class LoginRequest(BaseModel):
     email: EmailStr
