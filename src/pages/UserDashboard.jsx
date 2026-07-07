@@ -120,7 +120,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
       const mine = (nodes||[]).find(n => n.node_id === profile.node_id)
       if (mine) {
         locationRef.current = { location: mine.location, district: mine.district }
-        setReading(prev => prev ? { ...prev, ...locationRef.current } : mine)
+        setReading(mine)
       }
       setReadings((hist||[]).slice(0,24).reverse())
       
