@@ -4,17 +4,17 @@
 @tailwind utilities;
 
 :root {
-  /* Light Mode defaults */
-  --bg-color: #f2f7f4;
+  /* Light Mode defaults (Inspired by Dribbble Shot 46754416) */
+  --bg-color: #f0f1f5;
   --card-bg: #ffffff;
-  --card-border: #e2e8e5;
-  --card-hover: #fafcfb;
-  --card-hover-border: #d0dcd6;
-  --text-main: #0c0f0d;
-  --text-muted: #5e6b63;
+  --card-border: #dfdfe3;
+  --card-hover: #f8f9fa;
+  --card-hover-border: #cbd5e1;
+  --text-main: #171616;
+  --text-muted: #848486;
   --sidebar-bg: #ffffff;
-  --glow-blue: rgba(178,204,191,0.2);
-  --glow-green: rgba(5,10,5,0.05);
+  --glow-blue: rgba(0, 106, 255, 0.04);
+  --glow-green: rgba(16, 211, 67, 0.03);
 }
 
 :root.dark {
@@ -221,16 +221,16 @@
 
 /* ── Light Mode Override System ── */
 :root:not(.dark) {
-  --bg-color: #f2f7f4;
+  --bg-color: #f0f1f5;
   --card-bg: #ffffff;
-  --card-border: #e2e8e5;
-  --card-hover: #fafcfb;
-  --card-hover-border: #d0dcd6;
-  --text-main: #0c0f0d;
-  --text-muted: #5e6b63;
+  --card-border: #dfdfe3;
+  --card-hover: #f8f9fa;
+  --card-hover-border: #cbd5e1;
+  --text-main: #171616;
+  --text-muted: #848486;
   --sidebar-bg: #ffffff;
-  --glow-blue: rgba(178,204,191,0.2);
-  --glow-green: rgba(5,10,5,0.05);
+  --glow-blue: rgba(0, 106, 255, 0.04);
+  --glow-green: rgba(16, 211, 67, 0.03);
 }
 
 :root:not(.dark) .bg-darkBg {
@@ -242,11 +242,11 @@
 }
 
 :root:not(.dark) .text-white\/80 {
-  color: rgba(12, 15, 13, 0.8) !important;
+  color: rgba(23, 22, 22, 0.8) !important;
 }
 
 :root:not(.dark) .text-white\/70 {
-  color: rgba(12, 15, 13, 0.75) !important;
+  color: rgba(23, 22, 22, 0.75) !important;
 }
 
 :root:not(.dark) .text-white\/60 {
@@ -258,63 +258,63 @@
 }
 
 :root:not(.dark) .text-white\/40 {
-  color: rgba(12, 15, 13, 0.45) !important;
+  color: rgba(23, 22, 22, 0.45) !important;
 }
 
 :root:not(.dark) .text-white\/30 {
-  color: rgba(12, 15, 13, 0.3) !important;
+  color: rgba(23, 22, 22, 0.3) !important;
 }
 
 :root:not(.dark) .text-white\/20 {
-  color: rgba(12, 15, 13, 0.2) !important;
+  color: rgba(23, 22, 22, 0.2) !important;
 }
 
 :root:not(.dark) .text-white\/10 {
-  color: rgba(12, 15, 13, 0.1) !important;
+  color: rgba(23, 22, 22, 0.1) !important;
 }
 
 :root:not(.dark) .text-white\/5 {
-  color: rgba(12, 15, 13, 0.05) !important;
+  color: rgba(23, 22, 22, 0.05) !important;
 }
 
 :root:not(.dark) .bg-white\/5 {
-  background-color: rgba(12, 15, 13, 0.05) !important;
+  background-color: rgba(23, 22, 22, 0.05) !important;
 }
 
 :root:not(.dark) .bg-white\/10 {
-  background-color: rgba(12, 15, 13, 0.08) !important;
+  background-color: rgba(23, 22, 22, 0.08) !important;
 }
 
 :root:not(.dark) .bg-white\/20 {
-  background-color: rgba(12, 15, 13, 0.15) !important;
+  background-color: rgba(23, 22, 22, 0.15) !important;
 }
 
 :root:not(.dark) .border-white\/10 {
-  border-color: rgba(12, 15, 13, 0.1) !important;
+  border-color: rgba(23, 22, 22, 0.1) !important;
 }
 
 :root:not(.dark) .border-white\/5 {
-  border-color: rgba(12, 15, 13, 0.05) !important;
+  border-color: rgba(23, 22, 22, 0.05) !important;
 }
 
 :root:not(.dark) .border-white\/20 {
-  border-color: rgba(12, 15, 13, 0.15) !important;
+  border-color: rgba(23, 22, 22, 0.15) !important;
 }
 
 :root:not(.dark) .border-white\/30 {
-  border-color: rgba(12, 15, 13, 0.2) !important;
+  border-color: rgba(23, 22, 22, 0.2) !important;
 }
 
 :root:not(.dark) .bg-\[\#060913\] {
   background-color: #ffffff !important;
-  color: #0c0f0d !important;
-  border-color: rgba(12, 15, 13, 0.1) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(23, 22, 22, 0.1) !important;
 }
 
 :root:not(.dark) .bg-\[\#0c0d12\] {
   background-color: #ffffff !important;
-  color: #0c0f0d !important;
-  border-color: rgba(12, 15, 13, 0.1) !important;
+  color: var(--text-main) !important;
+  border-color: rgba(23, 22, 22, 0.1) !important;
 }
 
 /* Modal form inputs & selects */
