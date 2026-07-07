@@ -225,8 +225,21 @@ export default function AuthPage({ onLogin }) {
       </div>
 
       <style>{`
-        .ap-input { width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
-          border-radius:12px; padding:11px 14px; font-size:14px; color:white; outline:none; transition:border-color 0.2s; }
+        .ap-input {
+          width: 100%;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          padding: 11px 14px;
+          padding-left: 36px;
+          font-size: 14px;
+          color: white;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+        .ap-input.pr-10 {
+          padding-right: 40px;
+        }
         .ap-input:focus { border-color:rgba(0,162,255,0.5); }
         .ap-input option { background:#060913; color:white; }
         .ap-input::placeholder { color:rgba(255,255,255,0.25); }
