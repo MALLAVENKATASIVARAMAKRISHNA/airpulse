@@ -59,17 +59,25 @@
 
 /* ── Glassmorphism card ── */
 .glass-card {
-  background: #1b1b1b;
-  border: 1px solid #2e312e;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+:root.dark .glass-card {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .glass-card:hover {
-  background: #121212;
-  border-color: #3e423e;
+  background: var(--card-hover);
+  border-color: var(--card-hover-border);
+  box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.08);
+}
+
+:root.dark .glass-card:hover {
   box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.6);
 }
 
