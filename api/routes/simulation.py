@@ -119,8 +119,9 @@ def generate_and_insert(node_id, base):
     }
 
     # Run ML inference locally
-    is_anomaly, preds = run_local_inference(node_id, payload)
+    is_anomaly, preds, predicted_cause = run_local_inference(node_id, payload)
     payload['is_anomaly'] = is_anomaly
+    payload['cause'] = predicted_cause
 
     # Write to DB — admin panel, mobile app, history all read from here
     query("""
@@ -132,7 +133,7 @@ def generate_and_insert(node_id, base):
     """, (
         node_id, aqi, pm25, pm10, co, nh3, no2, ozone, co2, voc, smoke,
         subs['PM2.5'], subs['PM10'], subs['CO'], 0,
-        subs['NO2'], subs['Ozone'], dominant, CAUSE_MAP[dominant], is_anomaly
+        subs['NO2'], subs['Ozone'], dominant, predicted_cause, is_anomaly
     ), fetch='none')
 
     # Update predictions table

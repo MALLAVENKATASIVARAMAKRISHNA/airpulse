@@ -1,4 +1,4 @@
-import json, os, io, boto3, joblib, numpy as np, psycopg2, psycopg2.extras, httpx
+import json, os, io, boto3, joblib, numpy as np, pandas as pd, psycopg2, psycopg2.extras, httpx
 from datetime import datetime, timezone
 
 # ── Globals cached across warm invocations ───────────────────
@@ -66,6 +66,11 @@ def load_models():
     _models['anomaly'] = joblib.load(io.BytesIO(obj['Body'].read()))
     obj = S3.get_object(Bucket=BUCKET, Key='anomaly_scaler.pkl')
     _scaler = joblib.load(io.BytesIO(obj['Body'].read()))
+    try:
+        obj = S3.get_object(Bucket=BUCKET, Key='cause_classifier.pkl')
+        _models['cause'] = joblib.load(io.BytesIO(obj['Body'].read()))
+    except Exception as e:
+        print(f"Warning: could not load cause_classifier from S3: {e}")
     print('Models loaded from S3')
 
 # ── DB connection (reused across warm invocations) ───────────
@@ -118,7 +123,7 @@ def build_features(r, node_id):
     ]])
 
 # ── DB writes ────────────────────────────────────────────────
-def insert_reading(r, node_id, is_anomaly):
+def insert_reading(r, node_id, is_anomaly, cause):
     pm25,pm10,co,no2,ozone = r.get('pm25',0),r.get('pm10',0),r.get('co',0),r.get('no2',0),r.get('ozone',0)
     subs = {
         'PM2.5':sub_aqi(pm25,PM25_BP),'PM10':sub_aqi(pm10,PM10_BP),
@@ -138,7 +143,7 @@ def insert_reading(r, node_id, is_anomaly):
         node_id,r['aqi'],pm25,pm10,co,r.get('nh3',0),no2,ozone,
         r.get('co2',0),r.get('voc',0),r.get('smoke',0),
         subs['PM2.5'],subs['PM10'],subs['CO'],0,subs['NO2'],subs['Ozone'],
-        dom, CAUSE_MAP.get(dom,''), is_anomaly,
+        dom, cause, is_anomaly,
     ))
     reading_id = cur.fetchone()[0]
     conn.commit()
@@ -215,8 +220,49 @@ def lambda_handler(event, context):
     ]])
     is_anomaly = bool(_models['anomaly'].predict(_scaler.transform(anom_feat))[0] == -1)
 
+    # Cause classification (Random Forest Classifier)
+    try:
+        if 'cause' in _models:
+            meta = NODE_META[node_id]
+            cause_feat = pd.DataFrame([[
+                wthr['temp'], wthr['hum'], wthr['pres'], wthr['wind'], wthr['rain'], wthr['vis'],
+                wthr['traffic'], meta['pop'], meta['highway'], meta['factory'], meta['construction'], meta['green'],
+                event.get('pm25',0), event.get('pm10',0), event.get('co',0), event.get('co2',0),
+                event.get('no2',0), event.get('ozone',0), event.get('voc',0), event.get('smoke',0),
+                meta['zone']
+            ]], columns=[
+                'temperature', 'humidity', 'pressure', 'wind_speed', 'rainfall', 'visibility',
+                'traffic_density', 'population_density', 'near_highway', 'near_factory',
+                'near_construction', 'green_cover_percentage', 'PM2_5', 'PM10', 'CO', 'CO2',
+                'NO2', 'Ozone', 'VOC', 'Smoke', 'zone_type'
+            ])
+            cause_idx = int(_models['cause'].predict(cause_feat)[0])
+            
+            CAUSE_CLASSES = {
+                0: 'Construction Dust',
+                1: 'Industrial Emissions',
+                2: 'Vehicle Emissions',
+                3: 'Waste Burning',
+                4: 'Weather Conditions'
+            }
+            predicted_cause = CAUSE_CLASSES.get(cause_idx, 'General Emissions')
+        else:
+            raise ValueError("Cause classifier model not loaded")
+    except Exception as e:
+        print(f"Error predicting cause in Lambda: {e}")
+        meta = NODE_META[node_id]
+        # Fallback to rule-based scoring (identifying highest category)
+        scores = {
+            'Vehicle Emissions':    (35 if wthr['traffic'] > 70 else 0) + (25 if event.get('co', 0) > 2 else 0) + (20 if event.get('no2', 0) > 40 else 0) + (20 if event.get('pm25', 0) > 80 else 0),
+            'Industrial Emissions': (35 if meta['factory'] else 0) + (25 if event.get('co2', 0) > 800 else 0) + (20 if event.get('no2', 0) > 45 else 0) + (20 if event.get('ozone', 0) > 80 else 0),
+            'Construction Dust':    (40 if meta['construction'] else 0) + (35 if event.get('pm10', 0) > 150 else 0) + (15 if wthr['wind'] > 10 else 0),
+            'Waste Burning':        (40 if event.get('smoke', 0) > 70 else 0) + (20 if event.get('co', 0) > 2 else 0) + (25 if event.get('pm25', 0) > 100 else 0),
+            'Weather Conditions':   (30 if wthr['wind'] < 2 else 0) + (20 if wthr['rain'] == 0 else 0) + (25 if event.get('pm25', 0) > 90 else 0),
+        }
+        predicted_cause = max(scores, key=scores.get)
+
     # DB writes
-    reading_id, dominant = insert_reading(event, node_id, is_anomaly)
+    reading_id, dominant = insert_reading(event, node_id, is_anomaly, predicted_cause)
     insert_predictions(node_id, preds)
 
     # Push notifications

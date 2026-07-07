@@ -19,18 +19,19 @@ def load_models():
             _models[h] = joblib.load(os.path.join(MODELS_DIR, f'aqi_forecast_{h}.pkl'))
         _models['anomaly'] = joblib.load(os.path.join(MODELS_DIR, 'anomaly_detector.pkl'))
         _scaler = joblib.load(os.path.join(MODELS_DIR, 'anomaly_scaler.pkl'))
+        _models['cause'] = joblib.load(os.path.join(MODELS_DIR, 'cause_classifier.pkl'))
     except Exception as e:
         print(f"Error loading local ML models: {e}")
 
-def run_local_inference(node_id: str, reading: dict) -> tuple[bool, dict]:
+def run_local_inference(node_id: str, reading: dict) -> tuple[bool, dict, str]:
     """
-    Runs anomaly detection and forecast regressor models for a new reading.
-    Returns (is_anomaly, predictions_dict).
+    Runs anomaly detection, forecast regressor, and cause classifier models for a new reading.
+    Returns (is_anomaly, predictions_dict, predicted_cause).
     """
     load_models()
     if 'anomaly' not in _models or _scaler is None:
         # Fallback if models not found
-        return False, {'6h': reading['aqi'], '24h': reading['aqi'], '48h': reading['aqi']}
+        return False, {'6h': reading['aqi'], '24h': reading['aqi'], '48h': reading['aqi']}, 'General Emissions'
 
     # 1. Fetch metadata
     meta = query("""
@@ -148,7 +149,48 @@ def run_local_inference(node_id: str, reading: dict) -> tuple[bool, dict]:
         pred_val = _models[h].predict(feat_df)[0]
         preds[h] = int(np.clip(pred_val, 0, 500))
 
-    return is_anomaly, preds
+    # 8. Cause Classification (Random Forest Classifier)
+    try:
+        if 'cause' in _models:
+            cause_feat_vals = [
+                weather['temperature'], weather['humidity'], weather['pressure'], weather['wind_speed'],
+                weather['rainfall'], weather['visibility'], weather['traffic_density'], meta['population_density'],
+                meta['near_highway'], meta['near_factory'], meta['near_construction'], meta['green_cover_percentage'],
+                reading.get('pm25', 0), reading.get('pm10', 0), reading.get('co', 0), reading.get('co2', 0),
+                reading.get('no2', 0), reading.get('ozone', 0), reading.get('voc', 0), reading.get('smoke', 0),
+                meta['zone_type_code']
+            ]
+            cause_cols = [
+                'temperature', 'humidity', 'pressure', 'wind_speed', 'rainfall', 'visibility',
+                'traffic_density', 'population_density', 'near_highway', 'near_factory',
+                'near_construction', 'green_cover_percentage', 'PM2_5', 'PM10', 'CO', 'CO2',
+                'NO2', 'Ozone', 'VOC', 'Smoke', 'zone_type'
+            ]
+            cause_df = pd.DataFrame([cause_feat_vals], columns=cause_cols)
+            cause_idx = int(_models['cause'].predict(cause_df)[0])
+            
+            CAUSE_CLASSES = {
+                0: 'Construction Dust',
+                1: 'Industrial Emissions',
+                2: 'Vehicle Emissions',
+                3: 'Waste Burning',
+                4: 'Weather Conditions'
+            }
+            predicted_cause = CAUSE_CLASSES.get(cause_idx, 'General Emissions')
+        else:
+            raise ValueError("Cause classifier model not loaded")
+    except Exception as e:
+        # Fallback to rule-based scoring (identifying highest category)
+        scores = {
+            'Vehicle Emissions':    (35 if weather['traffic_density'] > 70 else 0) + (25 if reading.get('co', 0) > 2 else 0) + (20 if reading.get('no2', 0) > 40 else 0) + (20 if reading.get('pm25', 0) > 80 else 0),
+            'Industrial Emissions': (35 if meta['near_factory'] else 0) + (25 if reading.get('co2', 0) > 800 else 0) + (20 if reading.get('no2', 0) > 45 else 0) + (20 if reading.get('ozone', 0) > 80 else 0),
+            'Construction Dust':    (40 if meta['near_construction'] else 0) + (35 if reading.get('pm10', 0) > 150 else 0) + (15 if weather['wind_speed'] > 10 else 0),
+            'Waste Burning':        (40 if reading.get('smoke', 0) > 70 else 0) + (20 if reading.get('co', 0) > 2 else 0) + (25 if reading.get('pm25', 0) > 100 else 0),
+            'Weather Conditions':   (30 if weather['wind_speed'] < 2 else 0) + (20 if weather['rainfall'] == 0 else 0) + (25 if reading.get('pm25', 0) > 90 else 0),
+        }
+        predicted_cause = max(scores, key=scores.get)
+
+    return is_anomaly, preds, predicted_cause
 
 def update_predictions_table(node_id: str, preds: dict):
     """

@@ -32,7 +32,10 @@ class ReadingRequest(BaseModel):
 def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
     # Run ML inference locally
     reading_dict = data.dict()
-    is_anomaly, preds = run_local_inference(data.node_id, reading_dict)
+    is_anomaly, preds, predicted_cause = run_local_inference(data.node_id, reading_dict)
+    
+    # Use ML predicted cause if not manually provided
+    final_cause = data.cause if data.cause else predicted_cause
 
     row = query("""
         INSERT INTO aqi_readings (
@@ -45,7 +48,7 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
         data.node_id, data.aqi, data.pm25, data.pm10, data.co, data.nh3,
         data.no2, data.ozone, data.co2, data.voc, data.smoke,
         data.sub_aqi_pm25, data.sub_aqi_pm10, data.sub_aqi_co, data.sub_aqi_nh3,
-        data.sub_aqi_no2, data.sub_aqi_ozone, data.dominant_pollutant, data.cause,
+        data.sub_aqi_no2, data.sub_aqi_ozone, data.dominant_pollutant, final_cause,
         is_anomaly
     ), fetch='one')
 
