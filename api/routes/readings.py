@@ -39,47 +39,47 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
     from routes.simulation import NODE_BASES, get_time_factor, sub_aqi, PM25_BP, PM10_BP, NO2_BP, CO_BP, OZONE_BP
     import random
     
-    if node_id in NODE_BASES:
-        base = NODE_BASES[node_id]
-        tf = get_time_factor(node_id)
+    # Fallback base profile for custom/newly added nodes
+    base = NODE_BASES.get(node_id, {'pm25': 48, 'pm10': 72, 'co': 2.1, 'no2': 32, 'ozone': 38, 'co2': 430, 'voc': 8, 'smoke': 5})
+    tf = get_time_factor(node_id)
+    
+    def vary(val, pct=0.15):
+        return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
         
-        def vary(val, pct=0.15):
-            return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
-            
-        if reading_dict.get('pm25', 0) == 0:
-            reading_dict['pm25'] = vary(base['pm25'])
-        if reading_dict.get('pm10', 0) == 0:
-            reading_dict['pm10'] = vary(base['pm10'])
-        if reading_dict.get('ozone', 0) == 0:
-            reading_dict['ozone'] = vary(base['ozone'])
-        if reading_dict.get('no2', 0) == 0:
-            reading_dict['no2'] = vary(base['no2'])
-        if reading_dict.get('nh3', 0) == 0:
-            reading_dict['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
-        if reading_dict.get('voc', 0) == 0:
-            reading_dict['voc'] = vary(base['voc'])
-        if reading_dict.get('smoke', 0) == 0:
-            reading_dict['smoke'] = vary(base['smoke'])
-            
-        # Recompute sub-AQIs for the complete dataset
-        subs = {
-            'PM2.5': sub_aqi(reading_dict['pm25'],  PM25_BP),
-            'PM10':  sub_aqi(reading_dict['pm10'],  PM10_BP),
-            'CO':    sub_aqi(reading_dict['co'],    CO_BP),
-            'NO2':   sub_aqi(reading_dict['no2'],   NO2_BP),
-            'Ozone': sub_aqi(reading_dict['ozone'], OZONE_BP),
-        }
-        dominant = max(subs, key=subs.get)
+    if reading_dict.get('pm25', 0) == 0:
+        reading_dict['pm25'] = vary(base['pm25'])
+    if reading_dict.get('pm10', 0) == 0:
+        reading_dict['pm10'] = vary(base['pm10'])
+    if reading_dict.get('ozone', 0) == 0:
+        reading_dict['ozone'] = vary(base['ozone'])
+    if reading_dict.get('no2', 0) == 0:
+        reading_dict['no2'] = vary(base['no2'])
+    if reading_dict.get('nh3', 0) == 0:
+        reading_dict['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
+    if reading_dict.get('voc', 0) == 0:
+        reading_dict['voc'] = vary(base['voc'])
+    if reading_dict.get('smoke', 0) == 0:
+        reading_dict['smoke'] = vary(base['smoke'])
         
-        reading_dict['sub_aqi_pm25'] = subs['PM2.5']
-        reading_dict['sub_aqi_pm10'] = subs['PM10']
-        reading_dict['sub_aqi_co'] = subs['CO']
-        reading_dict['sub_aqi_no2'] = subs['NO2']
-        reading_dict['sub_aqi_ozone'] = subs['Ozone']
-        reading_dict['dominant_pollutant'] = dominant
-        
-        if reading_dict.get('aqi', 0) == 0 or reading_dict['aqi'] == subs['CO']:
-            reading_dict['aqi'] = max(subs.values())
+    # Recompute sub-AQIs for the complete dataset
+    subs = {
+        'PM2.5': sub_aqi(reading_dict['pm25'],  PM25_BP),
+        'PM10':  sub_aqi(reading_dict['pm10'],  PM10_BP),
+        'CO':    sub_aqi(reading_dict['co'],    CO_BP),
+        'NO2':   sub_aqi(reading_dict['no2'],   NO2_BP),
+        'Ozone': sub_aqi(reading_dict['ozone'], OZONE_BP),
+    }
+    dominant = max(subs, key=subs.get)
+    
+    reading_dict['sub_aqi_pm25'] = subs['PM2.5']
+    reading_dict['sub_aqi_pm10'] = subs['PM10']
+    reading_dict['sub_aqi_co'] = subs['CO']
+    reading_dict['sub_aqi_no2'] = subs['NO2']
+    reading_dict['sub_aqi_ozone'] = subs['Ozone']
+    reading_dict['dominant_pollutant'] = dominant
+    
+    if reading_dict.get('aqi', 0) == 0 or reading_dict['aqi'] == subs['CO']:
+        reading_dict['aqi'] = max(subs.values())
 
     is_anomaly, preds, predicted_cause = run_local_inference(node_id, reading_dict)
     

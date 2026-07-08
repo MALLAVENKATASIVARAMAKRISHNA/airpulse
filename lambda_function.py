@@ -218,53 +218,52 @@ def lambda_handler(event, context):
 
     # Hybrid Mode: Simulate and merge missing/placeholder physical sensor readings
     import math, random
-    if node_id in LAMBDA_NODE_BASES:
-        base = LAMBDA_NODE_BASES[node_id]
-        h = datetime.now(timezone.utc).hour
-        
-        # Diurnal factor calculation
-        if node_id == "NODE001":
-            tf = 0.95 + 0.10 * math.sin((h - 14) * math.pi / 12)
-            if random.random() < 0.05:
-                tf *= 1.75
+    base = LAMBDA_NODE_BASES.get(node_id, {'pm25': 48,  'pm10': 72,  'co': 2.1, 'no2': 32, 'ozone': 38, 'co2': 430, 'voc': 8,  'smoke': 5})
+    h = datetime.now(timezone.utc).hour
+    
+    # Diurnal factor calculation
+    if node_id == "NODE001":
+        tf = 0.95 + 0.10 * math.sin((h - 14) * math.pi / 12)
+        if random.random() < 0.05:
+            tf *= 1.75
+    else:
+        if 8 <= h <= 10:
+            tf = 1.35
+        elif 17 <= h <= 20:
+            tf = 1.45
+        elif 23 <= h or h <= 5:
+            tf = 0.55
         else:
-            if 8 <= h <= 10:
-                tf = 1.35
-            elif 17 <= h <= 20:
-                tf = 1.45
-            elif 23 <= h or h <= 5:
-                tf = 0.55
-            else:
-                tf = 0.90 + 0.15 * math.sin((h - 12) * math.pi / 6)
-                
-        def vary(val, pct=0.15):
-            return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
+            tf = 0.90 + 0.15 * math.sin((h - 12) * math.pi / 6)
             
-        if event.get('pm25', 0) == 0:
-            event['pm25'] = vary(base['pm25'])
-        if event.get('pm10', 0) == 0:
-            event['pm10'] = vary(base['pm10'])
-        if event.get('ozone', 0) == 0:
-            event['ozone'] = vary(base['ozone'])
-        if event.get('no2', 0) == 0:
-            event['no2'] = vary(base['no2'])
-        if event.get('nh3', 0) == 0:
-            event['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
-        if event.get('voc', 0) == 0:
-            event['voc'] = vary(base['voc'])
-        if event.get('smoke', 0) == 0:
-            event['smoke'] = vary(base['smoke'])
-            
-        # Re-evaluate AQI if it is zero or only based on partial physical sensors
-        subs = {
-            'PM2.5': sub_aqi(event['pm25'],  PM25_BP),
-            'PM10':  sub_aqi(event['pm10'],  PM10_BP),
-            'CO':    sub_aqi(event.get('co', 0), CO_BP),
-            'NO2':   sub_aqi(event['no2'],   NO2_BP),
-            'Ozone': sub_aqi(event['ozone'], OZONE_BP),
-        }
-        if event.get('aqi', 0) == 0 or event['aqi'] == subs['CO']:
-            event['aqi'] = max(subs.values())
+    def vary(val, pct=0.15):
+        return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
+        
+    if event.get('pm25', 0) == 0:
+        event['pm25'] = vary(base['pm25'])
+    if event.get('pm10', 0) == 0:
+        event['pm10'] = vary(base['pm10'])
+    if event.get('ozone', 0) == 0:
+        event['ozone'] = vary(base['ozone'])
+    if event.get('no2', 0) == 0:
+        event['no2'] = vary(base['no2'])
+    if event.get('nh3', 0) == 0:
+        event['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
+    if event.get('voc', 0) == 0:
+        event['voc'] = vary(base['voc'])
+    if event.get('smoke', 0) == 0:
+        event['smoke'] = vary(base['smoke'])
+        
+    # Re-evaluate AQI if it is zero or only based on partial physical sensors
+    subs = {
+        'PM2.5': sub_aqi(event['pm25'],  PM25_BP),
+        'PM10':  sub_aqi(event['pm10'],  PM10_BP),
+        'CO':    sub_aqi(event.get('co', 0), CO_BP),
+        'NO2':   sub_aqi(event['no2'],   NO2_BP),
+        'Ozone': sub_aqi(event['ozone'], OZONE_BP),
+    }
+    if event.get('aqi', 0) == 0 or event['aqi'] == subs['CO']:
+        event['aqi'] = max(subs.values())
 
     # ML inference
     feat = build_features(event, node_id)
