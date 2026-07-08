@@ -327,31 +327,29 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Superimposed AQI Prediction (30-Day Forecast) composed chart */}
+          {/* AQI Trend (Last 24 Hours) */}
           <div className="glass-card p-6 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-white/40 uppercase tracking-wide">AQI Prediction (30-Day Forecast)</p>
-              <select defaultValue="Monthly" className="bg-white/5 border border-white/10 rounded-btn px-2.5 py-1 text-xs text-white outline-none focus:border-brandCyan/40">
-                <option value="Weekly" className="bg-[#0c0d12]">Weekly</option>
-                <option value="Monthly" className="bg-[#0c0d12]">Monthly</option>
-                <option value="Yearly" className="bg-[#0c0d12]">Yearly</option>
-              </select>
+              <p className="text-xs text-white/40 uppercase tracking-wide">AQI Trend (Last 24 Hours)</p>
+              <span className="text-[10px] text-brandCyan bg-brandCyan/10 border border-brandCyan/20 px-2 py-0.5 rounded-full">
+                Real-time updates
+              </span>
             </div>
             
             <ResponsiveContainer width="100%" height={160}>
-              <AreaChart data={forecast30Data} margin={{ top:25, right:5, bottom:0, left:-20 }}>
+              <AreaChart data={readings} margin={{ top:25, right:5, bottom:0, left:-20 }}>
                 <defs>
-                  <linearGradient id="forecast-aqi-grad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="trend-aqi-grad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={meta.color} stopOpacity={0.3}/>
                     <stop offset="95%" stopColor={meta.color} stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="day" tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 250]} tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false}/>
-                <Tooltip contentStyle={{ background:'var(--card-bg)', border:'1px solid var(--card-border)', borderRadius:8, color:'var(--text-main)' }}/>
+                <XAxis dataKey="recorded_at" tickFormatter={formatTime} tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 'auto']} tick={{ fill:'var(--text-muted)', fontSize:10 }} axisLine={false} tickLine={false}/>
+                <Tooltip contentStyle={{ background:'var(--card-bg)', border:'1px solid var(--card-border)', borderRadius:8, color:'var(--text-main)' }} labelFormatter={formatTime} />
                 
-                {/* Predicted AQI Trend Area Fill */}
-                <Area type="monotone" dataKey="predicted" name="Predicted AQI" stroke={meta.color} strokeWidth={2} fill="url(#forecast-aqi-grad)" dot={<CustomPredictDot color={meta.color} />} activeDot={{ r: 6 }} />
+                {/* Historical AQI Trend Area Fill */}
+                <Area type="monotone" dataKey="aqi" name="AQI" stroke={meta.color} strokeWidth={2} fill="url(#trend-aqi-grad)" dot={{ r: 2, fill: meta.color }} activeDot={{ r: 6 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
