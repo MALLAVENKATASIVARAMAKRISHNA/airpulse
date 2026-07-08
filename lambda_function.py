@@ -199,6 +199,15 @@ def notify(node_id, aqi, location):
     except Exception as e:
         print(f'Notify error: {e}')
 
+# ── Node Bases for Hybrid Mode ──────────────────────────────
+LAMBDA_NODE_BASES = {
+    'NODE001': {'pm25': 90,  'pm10': 120, 'co': 6.5, 'no2': 65, 'ozone': 55, 'co2': 520, 'voc': 18, 'smoke': 12},
+    'NODE002': {'pm25': 48,  'pm10': 72,  'co': 2.1, 'no2': 32, 'ozone': 38, 'co2': 430, 'voc': 8,  'smoke': 5 },
+    'NODE003': {'pm25': 68,  'pm10': 95,  'co': 4.2, 'no2': 52, 'ozone': 45, 'co2': 470, 'voc': 12, 'smoke': 8 },
+    'NODE004': {'pm25': 105, 'pm10': 145, 'co': 8.0, 'no2': 78, 'ozone': 62, 'co2': 550, 'voc': 22, 'smoke': 16},
+    'NODE005': {'pm25': 28,  'pm10': 42,  'co': 1.2, 'no2': 18, 'ozone': 28, 'co2': 400, 'voc': 4,  'smoke': 2 },
+}
+
 # ── Handler ──────────────────────────────────────────────────
 def lambda_handler(event, context):
     load_models()
@@ -206,6 +215,56 @@ def lambda_handler(event, context):
     node_id = event.get('node_id','')
     if node_id not in NODE_META:
         return {'statusCode':400,'body':f'Unknown node: {node_id}'}
+
+    # Hybrid Mode: Simulate and merge missing/placeholder physical sensor readings
+    import math, random
+    if node_id in LAMBDA_NODE_BASES:
+        base = LAMBDA_NODE_BASES[node_id]
+        h = datetime.now(timezone.utc).hour
+        
+        # Diurnal factor calculation
+        if node_id == "NODE001":
+            tf = 0.95 + 0.10 * math.sin((h - 14) * math.pi / 12)
+            if random.random() < 0.05:
+                tf *= 1.75
+        else:
+            if 8 <= h <= 10:
+                tf = 1.35
+            elif 17 <= h <= 20:
+                tf = 1.45
+            elif 23 <= h or h <= 5:
+                tf = 0.55
+            else:
+                tf = 0.90 + 0.15 * math.sin((h - 12) * math.pi / 6)
+                
+        def vary(val, pct=0.15):
+            return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
+            
+        if event.get('pm25', 0) == 0:
+            event['pm25'] = vary(base['pm25'])
+        if event.get('pm10', 0) == 0:
+            event['pm10'] = vary(base['pm10'])
+        if event.get('ozone', 0) == 0:
+            event['ozone'] = vary(base['ozone'])
+        if event.get('no2', 0) == 0:
+            event['no2'] = vary(base['no2'])
+        if event.get('nh3', 0) == 0:
+            event['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
+        if event.get('voc', 0) == 0:
+            event['voc'] = vary(base['voc'])
+        if event.get('smoke', 0) == 0:
+            event['smoke'] = vary(base['smoke'])
+            
+        # Re-evaluate AQI if it is zero or only based on partial physical sensors
+        subs = {
+            'PM2.5': sub_aqi(event['pm25'],  PM25_BP),
+            'PM10':  sub_aqi(event['pm10'],  PM10_BP),
+            'CO':    sub_aqi(event.get('co', 0), CO_BP),
+            'NO2':   sub_aqi(event['no2'],   NO2_BP),
+            'Ozone': sub_aqi(event['ozone'], OZONE_BP),
+        }
+        if event.get('aqi', 0) == 0 or event['aqi'] == subs['CO']:
+            event['aqi'] = max(subs.values())
 
     # ML inference
     feat = build_features(event, node_id)
