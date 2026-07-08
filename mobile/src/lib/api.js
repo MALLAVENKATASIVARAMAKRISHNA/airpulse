@@ -30,7 +30,10 @@ export const api = {
   getIotUrl:    ()                => req('GET',  '/api/iot/url'),
   nodeReadings: (nodeId)          => req('GET',  `/api/nodes/${nodeId}/readings`),
   predictions:  (nodeId)          => req('GET',  `/api/ml/predictions/${nodeId}`),
-  hotspots:     ()                => req('GET',  '/api/ml/hotspots'),
-  anomalies:    ()                => req('GET',  '/api/ml/anomalies'),
-  healthRisk:   (body)            => req('POST', '/api/ml/health-risk', body),
+  hotspots:       ()     => req('GET',  '/api/ml/hotspots'),
+  anomalies:      ()     => req('GET',  '/api/ml/anomalies'),
+  healthRisk:     (body) => req('POST', '/api/ml/health-risk', body),
+  alertHistory:   ()     => req('GET',  '/api/auth/alerts'),
+  updateProfile:  (data) => req('PUT',  '/api/auth/profile', data),
+  changePassword: (data) => req('POST', '/api/auth/change-password', data),
 }

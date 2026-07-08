@@ -1,9 +1,41 @@
 import React from 'react'
-import { View, Text, ScrollView, RefreshControl, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, RefreshControl, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import Svg, { Circle, Path } from 'react-native-svg'
+import { useNavigation } from '@react-navigation/native'
 import { useAir } from '../context/AirContext'
-import { getAqiMeta, getWarnThreshold } from '../lib/airQuality'
+import { getAqiMeta, getWarnThreshold, POLLUTANTS } from '../lib/airQuality'
 import { api } from '../lib/api'
 import AqiGauge from '../components/AqiGauge'
+
+const C = {
+  bg:       '#0a0a0a',
+  surface:  '#161616',
+  surface2: '#1e1e1e',
+  amber:    '#E8B84B',
+  amberBg:  '#241e0a',
+  purple:   '#A78BFA',
+  purpleBg: '#1a1428',
+  teal:     '#3DD9AC',
+  tealBg:   '#0a201a',
+  coral:    '#FF6B6B',
+  coralBg:  '#200e0e',
+  white:    '#ffffff',
+  muted:    'rgba(255,255,255,0.40)',
+}
+
+const RISK_COLORS = {
+  'LOW':       '#3DD9AC',
+  'MODERATE':  '#E8B84B',
+  'HIGH':      '#FF7043',
+  'VERY HIGH': '#FF6B6B',
+  'CRITICAL':  '#A78BFA',
+}
+
+const NAV_CARDS = [
+  { icon: '📈', label: 'Forecast',   screen: 'Forecast',          color: C.amber,  bg: C.amberBg },
+  { icon: '❤️', label: 'Health',     screen: 'HealthAssessment',  color: C.coral,  bg: C.coralBg },
+  { icon: '🔔', label: 'Alerts',     screen: 'AlertCenter',       color: C.teal,   bg: C.tealBg  },
+]
 
 function formatTime(ts) {
   if (!ts) return '—'
@@ -11,12 +43,80 @@ function formatTime(ts) {
   return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+function getTip(aqi, health) {
+  const cond = health?.condition_name?.toLowerCase() ?? ''
+  if (aqi <= 50)  return 'Air quality is good. Safe for all outdoor activities.'
+  if (aqi <= 100) return 'Satisfactory. Unusually sensitive people should limit prolonged outdoor exertion.'
+  if (aqi <= 200) {
+    if (cond.includes('asthma') || cond.includes('copd'))
+      return 'Moderate air quality. Keep your inhaler handy and avoid prolonged outdoor activity.'
+    return 'Moderate air quality. Sensitive groups may experience minor irritation.'
+  }
+  if (aqi <= 300) return 'Poor air quality. Reduce outdoor activity. Wear an N95 mask if going outside.'
+  return 'Severe air quality. Stay indoors, keep windows closed. Seek medical help if you feel unwell.'
+}
+
+// ── SVG Donut Pie Chart ───────────────────────────────────────────────────────
+function polarXY(cx, cy, r, angleDeg) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+
+function donutSlicePath(cx, cy, r, startDeg, endDeg) {
+  if (endDeg - startDeg >= 359.9) {
+    endDeg = startDeg + 359.9
+  }
+  const s = polarXY(cx, cy, r, startDeg)
+  const e = polarXY(cx, cy, r, endDeg)
+  const large = endDeg - startDeg > 180 ? 1 : 0
+  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`
+}
+
+function DonutChart({ reading, size = 110, thickness = 18 }) {
+  if (!reading) return null
+  const cx = size / 2, cy = size / 2
+  const r  = (size - thickness) / 2
+
+  const sliceData = POLLUTANTS.map(p => ({
+    label: p.label,
+    color: p.color,
+    value: reading[p.subKey] ?? 0,
+  })).filter(d => d.value > 0)
+
+  const total = sliceData.reduce((s, d) => s + d.value, 0)
+  if (total === 0) return null
+
+  let angle = 0
+  const slices = sliceData.map(d => {
+    const span  = (d.value / total) * 360
+    const start = angle
+    angle += span + 1.5 // small gap between slices
+    return { ...d, start, end: angle - 1.5 }
+  })
+
+  return (
+    <Svg width={size} height={size}>
+      <Circle cx={cx} cy={cy} r={r} fill="none" stroke="#1e1e1e" strokeWidth={thickness} />
+      {slices.map((sl, i) => (
+        <Path
+          key={i}
+          d={donutSlicePath(cx, cy, r, sl.start, sl.end)}
+          fill="none"
+          stroke={sl.color}
+          strokeWidth={thickness}
+          strokeLinecap="butt"
+        />
+      ))}
+    </Svg>
+  )
+}
+
 export default function HomeScreen() {
+  const navigation = useNavigation()
   const { reading, health, loading, refresh, user, predictions: mlPredictions, live } = useAir()
   const [refreshing, setRefreshing] = React.useState(false)
   const [healthRisk, setHealthRisk] = React.useState(null)
 
-  // predictions come from IoT ML topic via AirContext
   const p6  = mlPredictions?.['6h']  ?? reading?.aqi ?? 0
   const p24 = mlPredictions?.['24h'] ?? reading?.aqi ?? 0
   const p48 = mlPredictions?.['48h'] ?? reading?.aqi ?? 0
@@ -35,58 +135,83 @@ export default function HomeScreen() {
   }
 
   if (loading && !reading) return (
-    <View style={styles.center}><ActivityIndicator size="large" color="#006aff" /></View>
+    <View style={s.center}><ActivityIndicator size="large" color={C.teal} /></View>
   )
 
   const aqi      = reading?.aqi ?? 0
   const meta     = getAqiMeta(aqi)
   const warnAt   = health ? getWarnThreshold(health.condition_name, health.severity_level, health.age) : 201
   const isDanger = aqi >= warnAt
+  const firstName = user?.full_name?.split(' ')[0] ?? 'there'
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#006aff']} />}
+      style={s.container}
+      contentContainerStyle={s.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.teal} colors={[C.teal]} />}
     >
-      {/* Location + time */}
-      <View style={styles.locationBar}>
-        <Text style={styles.locationIcon}>📍</Text>
-        <Text style={styles.locationText}>{reading?.location || '—'}</Text>
-        <Text style={styles.updateTime}>Updated {formatTime(reading?.recorded_at)}</Text>
+      {/* Greeting header */}
+      <View style={s.header}>
+        <View style={s.headerLeft}>
+          <Text style={s.greeting}>Hi, {firstName} 👋</Text>
+          <View style={s.locationRow}>
+            <Text style={s.locationText} numberOfLines={1}>📍 {reading?.location || '—'}</Text>
+            {live && <View style={s.liveDot} />}
+          </View>
+        </View>
+        <View style={s.timeChip}>
+          <Text style={s.timeText}>{formatTime(reading?.recorded_at)}</Text>
+        </View>
       </View>
 
       {/* Danger banner */}
       {isDanger && (
-        <View style={styles.dangerBanner}>
-          <Text style={styles.dangerIcon}>⚠️</Text>
+        <View style={s.dangerBanner}>
+          <Text style={s.dangerIcon}>⚠️</Text>
           <View style={{ flex: 1 }}>
-            <Text style={styles.dangerTitle}>Poor Air Quality Alert</Text>
-            <Text style={styles.dangerText}>AQI is {aqi} — limit outdoor activities and wear a mask.</Text>
+            <Text style={s.dangerTitle}>Air Quality Alert</Text>
+            <Text style={s.dangerText}>AQI {aqi} — limit outdoor activity and wear a mask.</Text>
           </View>
         </View>
       )}
 
       {/* Gauge */}
-      <View style={styles.gaugeCard}>
+      <View style={s.gaugeCard}>
+        <Text style={s.sectionLabel}>Air Quality Index</Text>
         <AqiGauge aqi={aqi} />
       </View>
 
-      {/* AQI Forecast */}
+      {/* Quick nav — Forecast, Health, Alerts */}
+      <View style={s.navRow}>
+        {NAV_CARDS.map(card => (
+          <TouchableOpacity
+            key={card.screen}
+            style={[s.navCard, { backgroundColor: card.bg }]}
+            onPress={() => navigation.navigate(card.screen)}
+            activeOpacity={0.7}
+          >
+            <Text style={s.navIcon}>{card.icon}</Text>
+            <Text style={[s.navLabel, { color: card.color }]}>{card.label}</Text>
+            <Text style={[s.navArrow, { color: card.color }]}>→</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Forecast chips */}
       {hasPredictions && (
-        <View style={styles.forecastCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <Text style={styles.forecastTitle}>AQI Forecast</Text>
-            {live && <Text style={{ fontSize: 10, color: '#10d343', fontWeight: '700' }}>⚡ Live</Text>}
+        <View style={s.section}>
+          <View style={s.sectionRow}>
+            <Text style={s.sectionTitle}>AQI Forecast</Text>
+            {live && <Text style={s.liveLabel}>⚡ Live</Text>}
           </View>
-          <View style={styles.forecastRow}>
-            {[['6h', p6], ['24h', p24], ['48h', p48]].map(([h, val]) => {
-              const fMeta = getAqiMeta(val)
+          <View style={s.forecastRow}>
+            {[['6h', p6, C.amber, C.amberBg], ['24h', p24, C.purple, C.purpleBg], ['48h', p48, C.teal, C.tealBg]].map(([h, val, color, bg]) => {
+              const fm = getAqiMeta(val)
               return (
-                <View key={h} style={[styles.forecastChip, { borderColor: fMeta.color }]}>
-                  <Text style={styles.forecastHorizon}>{h}</Text>
-                  <Text style={[styles.forecastAqi, { color: fMeta.color }]}>{val}</Text>
-                  <Text style={[styles.forecastLabel, { color: fMeta.color }]}>{fMeta.label}</Text>
+                <View key={h} style={[s.forecastChip, { backgroundColor: bg }]}>
+                  <Text style={[s.forecastHorizon, { color }]}>{h}</Text>
+                  <Text style={[s.forecastAqi, { color }]}>{val}</Text>
+                  <Text style={[s.forecastLabel, { color }]}>{fm.label}</Text>
                 </View>
               )
             })}
@@ -94,128 +219,183 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Dominant pollutant */}
-      {reading?.dominant_pollutant && (
-        <View style={[styles.infoCard, { borderLeftColor: meta.color }]}>
-          <Text style={styles.infoLabel}>Dominant Pollutant</Text>
-          <Text style={[styles.infoValue, { color: meta.color }]}>{reading.dominant_pollutant}</Text>
-          {reading.cause && <Text style={styles.infoDesc}>{reading.cause}</Text>}
+      {/* Sub-AQI composition — donut + legend */}
+      {reading && (
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Pollutant Composition</Text>
+          <View style={[s.compositionCard, { backgroundColor: C.surface }]}>
+            <DonutChart reading={reading} />
+            <View style={s.compositionLegend}>
+              {POLLUTANTS.map(p => {
+                const sub = reading[p.subKey] ?? 0
+                return (
+                  <View key={p.key} style={s.legendItem}>
+                    <View style={[s.legendDot, { backgroundColor: p.color }]} />
+                    <Text style={s.legendPollutant}>{p.label}</Text>
+                    <Text style={[s.legendValue, { color: p.color }]}>{sub}</Text>
+                  </View>
+                )
+              })}
+            </View>
+          </View>
         </View>
       )}
 
-      {/* Quick stats */}
-      <View style={styles.statsRow}>
-        <StatBox label="PM2.5" value={reading?.pm25?.toFixed(1)} unit="µg/m³" color="#EF5350" />
-        <StatBox label="PM10"  value={reading?.pm10?.toFixed(1)} unit="µg/m³" color="#FF7043" />
-        <StatBox label="NO2"   value={reading?.no2?.toFixed(1)}  unit="µg/m³" color="#AB47BC" />
+      {/* 6 Sub-AQI mini cards */}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Sub-AQI Breakdown</Text>
+        <View style={s.subAqiGrid}>
+          {POLLUTANTS.map(p => {
+            const sub = reading?.[p.subKey] ?? 0
+            const pct = Math.min((sub / 500) * 100, 100)
+            return (
+              <View key={p.key} style={[s.subAqiCard, { backgroundColor: p.color + '12' }]}>
+                <Text style={[s.subAqiPollutant, { color: p.color }]}>{p.label}</Text>
+                <Text style={[s.subAqiValue, { color: p.color }]}>{sub}</Text>
+                <View style={s.subAqiBarTrack}>
+                  <View style={[s.subAqiBarFill, { width: `${pct}%`, backgroundColor: p.color }]} />
+                </View>
+              </View>
+            )
+          })}
+        </View>
       </View>
 
-      {/* Health Risk Card */}
+      {/* Dominant pollutant */}
+      {reading?.dominant_pollutant && (
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Dominant Pollutant</Text>
+          <View style={[s.infoCard, { backgroundColor: C.surface }]}>
+            <View style={s.infoCardLeft}>
+              <View style={[s.pollutantBadge, { backgroundColor: meta.color + '22' }]}>
+                <Text style={[s.pollutantBadgeText, { color: meta.color }]}>{reading.dominant_pollutant}</Text>
+              </View>
+              {reading.cause && <Text style={s.causeText}>{reading.cause}</Text>}
+            </View>
+            <View style={[s.anomalyBadge, { backgroundColor: reading.is_anomaly ? C.coralBg : C.tealBg }]}>
+              <Text style={[s.anomalyText, { color: reading.is_anomaly ? C.coral : C.teal }]}>
+                {reading.is_anomaly ? '⚡ Spike' : '✓ Normal'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Health risk */}
       {healthRisk && (
-        <View style={[styles.riskCard, { borderLeftColor: RISK_COLORS[healthRisk.risk_level] }]}>
-          <View style={styles.riskTop}>
-            <View>
-              <Text style={styles.riskLabel}>Your Health Risk</Text>
-              <Text style={[styles.riskLevel, { color: RISK_COLORS[healthRisk.risk_level] }]}>
-                {healthRisk.risk_level}
-              </Text>
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Your Health Risk</Text>
+          <View style={[s.riskCard, { backgroundColor: C.surface }]}>
+            <View style={s.riskTop}>
+              <View>
+                <Text style={[s.riskLevel, { color: RISK_COLORS[healthRisk.risk_level] }]}>
+                  {healthRisk.risk_level}
+                </Text>
+                <Text style={s.riskMask}>Mask: <Text style={{ color: C.white, fontWeight: '700' }}>{healthRisk.mask}</Text></Text>
+              </View>
+              <View style={[s.riskScoreBox, { backgroundColor: RISK_COLORS[healthRisk.risk_level] + '20' }]}>
+                <Text style={[s.riskScoreVal, { color: RISK_COLORS[healthRisk.risk_level] }]}>{healthRisk.risk_score}</Text>
+                <Text style={[s.riskScoreMax, { color: RISK_COLORS[healthRisk.risk_level] }]}>/100</Text>
+              </View>
             </View>
-            <View style={[styles.riskScore, { backgroundColor: RISK_COLORS[healthRisk.risk_level] + '28' }]}>
-              <Text style={[styles.riskScoreVal, { color: RISK_COLORS[healthRisk.risk_level] }]}>
-                {healthRisk.risk_score}
-              </Text>
-              <Text style={[styles.riskScoreMax, { color: RISK_COLORS[healthRisk.risk_level] }]}>/100</Text>
+            <View style={s.riskBarTrack}>
+              <View style={[s.riskBarFill, { width: `${healthRisk.risk_score}%`, backgroundColor: RISK_COLORS[healthRisk.risk_level] }]} />
             </View>
+            <Text style={s.riskAdvice}>{healthRisk.advice}</Text>
           </View>
-          <View style={styles.riskBarTrack}>
-            <View style={[styles.riskBarFill, { width: `${healthRisk.risk_score}%`, backgroundColor: RISK_COLORS[healthRisk.risk_level] }]} />
-          </View>
-          <Text style={styles.riskMask}>😷 Mask: <Text style={{ fontWeight: '700', color: '#fff' }}>{healthRisk.mask}</Text></Text>
-          <Text style={styles.riskAdvice}>{healthRisk.advice}</Text>
         </View>
       )}
 
       {/* Health tip */}
-      <View style={[styles.tipCard, { borderLeftColor: meta.color }]}>
-        <Text style={[styles.tipTitle, { color: meta.color }]}>Health Guidance</Text>
-        <Text style={styles.tipText}>{getTip(aqi, health)}</Text>
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Health Guidance</Text>
+        <View style={[s.tipCard, { backgroundColor: C.surface, borderLeftColor: meta.color }]}>
+          <Text style={s.tipText}>{getTip(aqi, health)}</Text>
+        </View>
       </View>
     </ScrollView>
   )
 }
 
-const RISK_COLORS = {
-  'LOW':       '#00C853',
-  'MODERATE':  '#F9A825',
-  'HIGH':      '#FF7043',
-  'VERY HIGH': '#EF5350',
-  'CRITICAL':  '#AB47BC',
-}
+const s = StyleSheet.create({
+  container:            { flex: 1, backgroundColor: C.bg },
+  content:              { paddingBottom: 32 },
+  center:               { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
 
-function StatBox({ label, value, unit, color }) {
-  return (
-    <View style={styles.statBox}>
-      <Text style={[styles.statValue, { color }]}>{value ?? '—'}</Text>
-      <Text style={styles.statUnit}>{unit}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  )
-}
+  header:               { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14 },
+  headerLeft:           { flex: 1, marginRight: 12 },
+  greeting:             { fontSize: 22, fontWeight: '800', color: C.white, marginBottom: 4 },
+  locationRow:          { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  locationText:         { fontSize: 13, color: C.muted, flex: 1 },
+  liveDot:              { width: 7, height: 7, borderRadius: 4, backgroundColor: C.teal },
+  timeChip:             { backgroundColor: C.surface2, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  timeText:             { fontSize: 12, color: C.muted, fontWeight: '600' },
 
-function getTip(aqi, health) {
-  const condition = health?.condition_name?.toLowerCase() ?? ''
-  if (aqi <= 50)  return 'Air quality is good. Safe for all activities outdoors.'
-  if (aqi <= 100) return 'Air quality is satisfactory. Unusually sensitive people should reduce prolonged outdoor exertion.'
-  if (aqi <= 200) {
-    if (condition.includes('asthma') || condition.includes('copd'))
-      return 'Moderate air quality. Keep your inhaler handy and avoid prolonged outdoor activity.'
-    return 'Moderate air quality. Sensitive groups may experience minor irritation.'
-  }
-  if (aqi <= 300) return 'Poor air quality. Everyone should reduce outdoor activity. Wear an N95 mask if going outside.'
-  return 'Very poor to severe air quality. Stay indoors, keep windows closed. Seek medical help if you feel unwell.'
-}
+  dangerBanner:         { flexDirection: 'row', backgroundColor: C.coralBg, marginHorizontal: 16, marginBottom: 12, borderRadius: 16, padding: 14, alignItems: 'center', gap: 10, borderLeftWidth: 3, borderLeftColor: C.coral },
+  dangerIcon:           { fontSize: 20 },
+  dangerTitle:          { fontSize: 14, fontWeight: '700', color: C.coral, marginBottom: 2 },
+  dangerText:           { fontSize: 13, color: C.coral + 'cc', lineHeight: 18 },
 
-const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: '#060913' },
-  content:       { paddingBottom: 24 },
-  center:        { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#060913' },
-  locationBar:   { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  locationIcon:  { fontSize: 14, marginRight: 6 },
-  locationText:  { flex: 1, fontSize: 14, fontWeight: '600', color: '#ffffff' },
-  updateTime:    { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
-  dangerBanner:  { flexDirection: 'row', backgroundColor: 'rgba(239,83,80,0.12)', borderLeftWidth: 4, borderLeftColor: '#EF5350', marginHorizontal: 16, marginTop: 12, borderRadius: 12, padding: 14, alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: 'rgba(239,83,80,0.25)' },
-  dangerIcon:    { fontSize: 20 },
-  dangerTitle:   { fontSize: 14, fontWeight: '700', color: '#FF5252', marginBottom: 2 },
-  dangerText:    { fontSize: 13, color: 'rgba(255,82,82,0.8)', lineHeight: 18 },
-  gaugeCard:     { backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 16, marginTop: 12, borderRadius: 20, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  infoCard:      { backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 16, marginTop: 12, borderRadius: 16, padding: 16, borderLeftWidth: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  infoLabel:     { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  infoValue:     { fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  infoDesc:      { fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 18 },
-  statsRow:      { flexDirection: 'row', marginHorizontal: 16, marginTop: 12, gap: 8 },
-  statBox:       { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  statValue:     { fontSize: 20, fontWeight: '800' },
-  statUnit:      { fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 1 },
-  statLabel:     { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginTop: 2 },
-  riskCard:      { backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 16, marginTop: 12, borderRadius: 16, padding: 16, borderLeftWidth: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  riskTop:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  riskLabel:     { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 },
-  riskLevel:     { fontSize: 18, fontWeight: '800' },
-  riskScore:     { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
-  riskScoreVal:  { fontSize: 26, fontWeight: '900' },
-  riskScoreMax:  { fontSize: 13, fontWeight: '600', marginBottom: 3 },
-  riskBarTrack:  { height: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 },
-  riskBarFill:   { height: 6, borderRadius: 3 },
-  riskMask:      { fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 4 },
-  riskAdvice:    { fontSize: 13, color: 'rgba(255,255,255,0.70)', lineHeight: 18 },
-  tipCard:       { marginHorizontal: 16, marginTop: 12, borderRadius: 16, padding: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', borderLeftWidth: 4 },
-  tipTitle:      { fontSize: 13, fontWeight: '700', marginBottom: 6 },
-  tipText:       { fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.75)' },
-  forecastCard:  { backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 16, marginTop: 12, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  forecastTitle: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
-  forecastRow:   { flexDirection: 'row', gap: 8 },
-  forecastChip:  { flex: 1, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', padding: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' },
-  forecastHorizon:{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.45)', marginBottom: 4 },
-  forecastAqi:   { fontSize: 22, fontWeight: '900', color: '#ffffff' },
-  forecastLabel: { fontSize: 10, fontWeight: '600', marginTop: 1 },
+  gaugeCard:            { backgroundColor: C.surface, marginHorizontal: 16, marginBottom: 16, borderRadius: 24, padding: 20, alignItems: 'center' },
+  sectionLabel:         { fontSize: 11, fontWeight: '600', color: C.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+
+  // Quick nav
+  navRow:               { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginBottom: 16 },
+  navCard:              { flex: 1, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
+  navIcon:              { fontSize: 20, marginBottom: 2 },
+  navLabel:             { fontSize: 12, fontWeight: '700' },
+  navArrow:             { fontSize: 12, fontWeight: '800' },
+
+  section:              { marginHorizontal: 16, marginBottom: 16 },
+  sectionRow:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  sectionTitle:         { fontSize: 13, fontWeight: '700', color: C.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
+  liveLabel:            { fontSize: 11, fontWeight: '700', color: C.teal },
+
+  // Forecast chips
+  forecastRow:          { flexDirection: 'row', gap: 8 },
+  forecastChip:         { flex: 1, borderRadius: 16, padding: 14, alignItems: 'center' },
+  forecastHorizon:      { fontSize: 11, fontWeight: '700', marginBottom: 6, opacity: 0.8 },
+  forecastAqi:          { fontSize: 24, fontWeight: '900', marginBottom: 2 },
+  forecastLabel:        { fontSize: 10, fontWeight: '600', opacity: 0.85 },
+
+  // Donut composition
+  compositionCard:      { borderRadius: 18, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16 },
+  compositionLegend:    { flex: 1, gap: 6 },
+  legendItem:           { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendDot:            { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  legendPollutant:      { fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: '600', flex: 1 },
+  legendValue:          { fontSize: 12, fontWeight: '800' },
+
+  // 6 sub-AQI cards
+  subAqiGrid:           { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  subAqiCard:           { width: '31%', borderRadius: 14, padding: 12 },
+  subAqiPollutant:      { fontSize: 10, fontWeight: '700', marginBottom: 4, opacity: 0.85 },
+  subAqiValue:          { fontSize: 22, fontWeight: '900', marginBottom: 8 },
+  subAqiBarTrack:       { height: 3, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 2, overflow: 'hidden' },
+  subAqiBarFill:        { height: 3, borderRadius: 2 },
+
+  // Info card
+  infoCard:             { borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  infoCardLeft:         { flex: 1 },
+  pollutantBadge:       { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10, marginBottom: 8 },
+  pollutantBadgeText:   { fontSize: 14, fontWeight: '800' },
+  causeText:            { fontSize: 13, color: C.muted, lineHeight: 18 },
+  anomalyBadge:         { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  anomalyText:          { fontSize: 12, fontWeight: '700' },
+
+  // Risk
+  riskCard:             { borderRadius: 16, padding: 16 },
+  riskTop:              { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  riskLevel:            { fontSize: 20, fontWeight: '800', marginBottom: 4 },
+  riskMask:             { fontSize: 13, color: C.muted },
+  riskScoreBox:         { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, gap: 2 },
+  riskScoreVal:         { fontSize: 30, fontWeight: '900' },
+  riskScoreMax:         { fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  riskBarTrack:         { height: 5, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', marginBottom: 12 },
+  riskBarFill:          { height: 5, borderRadius: 3 },
+  riskAdvice:           { fontSize: 13, color: C.muted, lineHeight: 19 },
+
+  // Tip
+  tipCard:              { borderRadius: 16, padding: 16, borderLeftWidth: 3 },
+  tipText:              { fontSize: 14, color: 'rgba(255,255,255,0.70)', lineHeight: 21 },
 })

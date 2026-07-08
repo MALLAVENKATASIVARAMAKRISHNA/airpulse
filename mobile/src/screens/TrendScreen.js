@@ -137,18 +137,18 @@ function StatBox({ label, value, color }) {
 }
 
 const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: '#060913' },
+  container:     { flex: 1, backgroundColor: '#0a0a0a' },
   content:       { padding: 16, paddingBottom: 32 },
-  center:        { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#060913' },
+  center:        { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#0a0a0a' },
   empty:         { fontSize: 14, color: 'rgba(255,255,255,0.40)', textAlign: 'center', lineHeight: 20 },
   title:         { fontSize: 20, fontWeight: '800', color: '#ffffff' },
   sub:           { fontSize: 13, color: 'rgba(255,255,255,0.40)', marginBottom: 16, marginTop: 2 },
   statsRow:      { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  statBox:       { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  statBox:       { flex: 1, backgroundColor: '#161616', borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   statValue:     { fontSize: 20, fontWeight: '800' },
   statLabel:     { fontSize: 11, color: 'rgba(255,255,255,0.40)', marginTop: 2, fontWeight: '600' },
-  chartCard:     { backgroundColor: '#0c1120', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', marginBottom: 12, overflow: 'hidden' },
-  legendRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  chartCard:     { backgroundColor: '#161616', borderRadius: 16, padding: 12,  marginBottom: 12, overflow: 'hidden' },
+  legendRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, backgroundColor: '#161616', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   legendItem:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot:     { width: 10, height: 10, borderRadius: 5 },
   legendText:    { fontSize: 11, color: 'rgba(255,255,255,0.55)' },

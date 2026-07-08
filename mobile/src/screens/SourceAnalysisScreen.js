@@ -182,16 +182,16 @@ export default function SourceAnalysisScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#060913' },
+  container:    { flex: 1, backgroundColor: '#0a0a0a' },
   content:      { padding: 16, paddingBottom: 32 },
-  center:       { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#060913' },
-  causeCard:    { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, flexDirection: 'row', alignItems: 'flex-start', gap: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  center:       { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
+  causeCard:    { backgroundColor: '#161616', borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, flexDirection: 'row', alignItems: 'flex-start', gap: 14,  },
   causeEmoji:   { fontSize: 36, width: 44, textAlign: 'center' },
   causeBody:    { flex: 1 },
   causeLabel:   { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
   causeDominant:{ fontSize: 16, fontWeight: '800', color: '#ffffff', marginBottom: 4 },
   causeText:    { fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 20 },
-  section:      { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  section:      { backgroundColor: '#161616', borderRadius: 16, padding: 16, marginBottom: 16,  },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#ffffff', marginBottom: 2 },
   sectionSub:   { fontSize: 12, color: 'rgba(255,255,255,0.40)', marginBottom: 14 },
   pollRow:      { marginBottom: 14 },

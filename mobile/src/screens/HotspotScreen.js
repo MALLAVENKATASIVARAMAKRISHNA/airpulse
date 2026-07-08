@@ -25,19 +25,19 @@ export default function HotspotScreen() {
   }
 
   if (loading && !allNodes.length) return (
-    <View style={styles.center}><ActivityIndicator size="large" color="#006aff" /></View>
+    <View style={s.center}><ActivityIndicator size="large" color="#3DD9AC" /></View>
   )
 
   const sorted = [...allNodes].sort((a, b) => (b.aqi ?? 0) - (a.aqi ?? 0))
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#006aff']} />}
+      style={s.container}
+      contentContainerStyle={s.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3DD9AC" colors={['#3DD9AC']} />}
     >
-      <Text style={styles.title}>Pollution Hotspots</Text>
-      <Text style={styles.sub}>All monitoring stations ranked by AQI · auto-updates every 30s</Text>
+      <Text style={s.pageTitle}>Pollution Hotspots</Text>
+      <Text style={s.pageSub}>All monitoring stations ranked by AQI</Text>
 
       {sorted.map((node, i) => {
         const aqi     = node.aqi ?? 0
@@ -46,31 +46,34 @@ export default function HotspotScreen() {
         const cluster = clusterForNode(node.node_id)
 
         return (
-          <View key={node.node_id} style={[styles.card, isUser && styles.cardHighlight]}>
-            <View style={[styles.rank, { backgroundColor: meta.color + '28' }]}>
-              <Text style={[styles.rankText, { color: meta.color }]}>#{i + 1}</Text>
+          <View key={node.node_id} style={[s.card, isUser && { borderColor: '#3DD9AC', borderWidth: 1.5 }]}>
+            {/* Rank */}
+            <View style={[s.rankBox, { backgroundColor: meta.color + '18' }]}>
+              <Text style={[s.rankText, { color: meta.color }]}>#{i + 1}</Text>
             </View>
 
-            <View style={styles.info}>
-              <View style={styles.nameRow}>
-                <Text style={styles.location}>{node.location}</Text>
-                {isUser && <View style={styles.youBadge}><Text style={styles.youText}>Your location</Text></View>}
-                {cluster && <View style={styles.clusterBadge}><Text style={styles.clusterText}>{cluster.label}</Text></View>}
+            {/* Info */}
+            <View style={s.info}>
+              <View style={s.nameRow}>
+                <Text style={s.location} numberOfLines={1}>{node.location}</Text>
+                {isUser && <View style={s.youBadge}><Text style={s.youText}>You</Text></View>}
+                {cluster && <View style={s.clusterBadge}><Text style={s.clusterText}>{cluster.label}</Text></View>}
               </View>
-              <Text style={styles.district}>{node.district}, {node.state}</Text>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${Math.min((aqi / 500) * 100, 100)}%`, backgroundColor: meta.color }]} />
+              <Text style={s.district}>{node.district}</Text>
+              <View style={s.barTrack}>
+                <View style={[s.barFill, { width: `${Math.min((aqi / 500) * 100, 100)}%`, backgroundColor: meta.color }]} />
               </View>
-              <View style={styles.pollRow}>
-                <PollMini label="PM2.5" value={node.pm25?.toFixed(0)} />
-                <PollMini label="PM10"  value={node.pm10?.toFixed(0)} />
-                <PollMini label="NO2"   value={node.no2?.toFixed(0)}  />
+              <View style={s.pollRow}>
+                <PollMini label="PM2.5" value={node.pm25?.toFixed(0)} color={meta.color} />
+                <PollMini label="PM10"  value={node.pm10?.toFixed(0)} color={meta.color} />
+                <PollMini label="NO2"   value={node.no2?.toFixed(0)}  color={meta.color} />
               </View>
             </View>
 
-            <View style={styles.aqiBox}>
-              <Text style={[styles.aqiValue, { color: meta.color }]}>{aqi}</Text>
-              <Text style={[styles.aqiLabel, { color: meta.color }]}>{meta.label}</Text>
+            {/* AQI */}
+            <View style={s.aqiBox}>
+              <Text style={[s.aqiVal, { color: meta.color }]}>{aqi}</Text>
+              <Text style={[s.aqiLabel, { color: meta.color }]}>{meta.label}</Text>
             </View>
           </View>
         )
@@ -79,40 +82,39 @@ export default function HotspotScreen() {
   )
 }
 
-function PollMini({ label, value }) {
+function PollMini({ label, value, color }) {
   return (
-    <View style={styles.pollMini}>
-      <Text style={styles.pollLabel}>{label} </Text>
-      <Text style={styles.pollValue}>{value ?? '—'}</Text>
+    <View style={s.pollMini}>
+      <Text style={s.pollLabel}>{label} </Text>
+      <Text style={[s.pollVal, { color }]}>{value ?? '—'}</Text>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: '#060913' },
-  content:       { padding: 16, paddingBottom: 32 },
-  center:        { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#060913' },
-  title:         { fontSize: 20, fontWeight: '800', color: '#ffffff' },
-  sub:           { fontSize: 13, color: 'rgba(255,255,255,0.40)', marginBottom: 16, marginTop: 2 },
-  card:          { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  cardHighlight: { borderColor: '#006aff', borderWidth: 2 },
-  rank:          { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  rankText:      { fontSize: 13, fontWeight: '700' },
-  info:          { flex: 1 },
-  nameRow:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  location:      { fontSize: 15, fontWeight: '700', color: '#ffffff', flexShrink: 1 },
-  youBadge:      { backgroundColor: 'rgba(0,106,255,0.20)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  youText:       { fontSize: 11, color: '#006aff', fontWeight: '600' },
-  clusterBadge:  { backgroundColor: 'rgba(171,71,188,0.20)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  clusterText:   { fontSize: 11, color: '#AB47BC', fontWeight: '600' },
-  district:      { fontSize: 12, color: 'rgba(255,255,255,0.40)', marginBottom: 8 },
-  barTrack:      { height: 4, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 2, marginBottom: 8, overflow: 'hidden' },
-  barFill:       { height: 4, borderRadius: 2 },
-  pollRow:       { flexDirection: 'row', gap: 12 },
-  pollMini:      { flexDirection: 'row' },
-  pollLabel:     { fontSize: 11, color: 'rgba(255,255,255,0.40)' },
-  pollValue:     { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.65)' },
-  aqiBox:        { alignItems: 'flex-end', justifyContent: 'center' },
-  aqiValue:      { fontSize: 28, fontWeight: '900' },
-  aqiLabel:      { fontSize: 11, fontWeight: '600', marginTop: -2 },
+const s = StyleSheet.create({
+  container:   { flex: 1, backgroundColor: '#0a0a0a' },
+  content:     { padding: 16, paddingBottom: 40 },
+  center:      { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
+  pageTitle:   { fontSize: 22, fontWeight: '800', color: '#ffffff', marginBottom: 4, marginTop: 4 },
+  pageSub:     { fontSize: 13, color: 'rgba(255,255,255,0.40)', marginBottom: 18 },
+  card:        { backgroundColor: '#161616', borderRadius: 18, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  rankBox:     { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  rankText:    { fontSize: 13, fontWeight: '800' },
+  info:        { flex: 1 },
+  nameRow:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' },
+  location:    { fontSize: 15, fontWeight: '700', color: '#ffffff', flexShrink: 1 },
+  youBadge:    { backgroundColor: 'rgba(61,217,172,0.18)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  youText:     { fontSize: 11, color: '#3DD9AC', fontWeight: '700' },
+  clusterBadge:{ backgroundColor: 'rgba(167,139,250,0.18)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  clusterText: { fontSize: 11, color: '#A78BFA', fontWeight: '600' },
+  district:    { fontSize: 12, color: 'rgba(255,255,255,0.35)', marginBottom: 10 },
+  barTrack:    { height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' },
+  barFill:     { height: 4, borderRadius: 2 },
+  pollRow:     { flexDirection: 'row', gap: 14 },
+  pollMini:    { flexDirection: 'row' },
+  pollLabel:   { fontSize: 11, color: 'rgba(255,255,255,0.35)' },
+  pollVal:     { fontSize: 11, fontWeight: '700' },
+  aqiBox:      { alignItems: 'flex-end', justifyContent: 'center', minWidth: 56 },
+  aqiVal:      { fontSize: 30, fontWeight: '900' },
+  aqiLabel:    { fontSize: 11, fontWeight: '600', marginTop: -2 },
 })

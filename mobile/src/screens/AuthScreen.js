@@ -24,7 +24,7 @@ function AirPulseLogo() {
       <Svg width={72} height={72} viewBox="0 0 100 100">
         <Defs>
           <SvgGradient id="lgrad" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#006aff" />
+            <Stop offset="0" stopColor="#3DD9AC" />
             <Stop offset="1" stopColor="#10d343" />
           </SvgGradient>
         </Defs>
@@ -167,7 +167,7 @@ export default function AuthScreen({ onLogin, onSignup }) {
 
           <TouchableOpacity onPress={submit} disabled={loading} activeOpacity={0.85}>
             <LinearGradient
-              colors={['#006aff', '#10d343']}
+              colors={['#3DD9AC', '#60A5FA']}
               start={[0, 0]} end={[1, 0]}
               style={styles.btn}
             >
@@ -192,13 +192,13 @@ export default function AuthScreen({ onLogin, onSignup }) {
 }
 
 const styles = StyleSheet.create({
-  container:        { flexGrow: 1, backgroundColor: '#060913', paddingBottom: 40 },
+  container:        { flexGrow: 1, backgroundColor: '#0a0a0a', paddingBottom: 40 },
   logoWrap:         { alignItems: 'center', paddingTop: 60, paddingBottom: 28 },
   logoName:         { fontSize: 28, fontWeight: '900', color: '#ffffff', letterSpacing: -0.5, marginTop: 14 },
-  logoAccent:       { color: '#006aff' },
+  logoAccent:       { color: '#3DD9AC' },
   logoSub:          { fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, textTransform: 'uppercase', marginTop: 4 },
   card:             { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 24, marginHorizontal: 16, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  welcome:          { fontSize: 12, fontWeight: '600', color: '#006aff', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 },
+  welcome:          { fontSize: 12, fontWeight: '600', color: '#3DD9AC', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 },
   title:            { fontSize: 22, fontWeight: '800', color: '#ffffff', marginBottom: 20 },
   tabs:             { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 3, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   tab:              { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },

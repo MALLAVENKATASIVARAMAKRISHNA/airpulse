@@ -200,15 +200,15 @@ const PROTECTIVE = [
 ]
 
 const styles = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: '#060913' },
+  container:       { flex: 1, backgroundColor: '#0a0a0a' },
   content:         { padding: 16, paddingBottom: 32 },
-  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#060913' },
-  aqiBanner:       { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
+  aqiBanner:       { backgroundColor: '#161616', borderRadius: 16, padding: 16, marginBottom: 16, borderLeftWidth: 4,  },
   aqiBannerTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   aqiBannerLabel:  { fontSize: 16, fontWeight: '800' },
   aqiBannerAqi:    { fontSize: 28, fontWeight: '900' },
   aqiBannerMsg:    { fontSize: 14, color: 'rgba(255,255,255,0.70)', lineHeight: 20 },
-  section:         { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  section:         { backgroundColor: '#161616', borderRadius: 16, padding: 16, marginBottom: 16,  },
   sectionHeader:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   sectionIcon:     { fontSize: 20 },
   sectionTitle:    { fontSize: 15, fontWeight: '700', color: '#ffffff', marginBottom: 0 },

@@ -21,10 +21,12 @@ export default function ProfileScreen({ route, navigation }) {
   const { user: ctxUser, health: ctxHealth } = useAir()
 
   const [user, setUser]             = useState(ctxUser)
+  const [nodes, setNodes]           = useState([])
   const [conditions, setConditions] = useState([])
   const [saving, setSaving]         = useState(false)
   const [condModal, setCondModal]   = useState(false)
   const [sevModal, setSevModal]     = useState(false)
+  const [nodeModal, setNodeModal]   = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
 
   const [form, setForm] = useState({
@@ -35,22 +37,39 @@ export default function ProfileScreen({ route, navigation }) {
     gender:        ctxHealth?.gender || '',
   })
 
+  const [profileForm, setProfileForm] = useState({
+    full_name: ctxUser?.full_name || '',
+    email:     ctxUser?.email     || '',
+    node_id:   ctxUser?.node_id   || '',
+  })
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMsg,    setProfileMsg]    = useState('')
+
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwMsg,    setPwMsg]    = useState('')
+
   useEffect(() => {
-    Promise.all([api.me(), api.getHealth().catch(() => null), api.conditions()])
-      .then(([u, h, conds]) => {
-        setUser(u)
-        setConditions(conds || [])
-        if (h) {
-          setForm({
-            conditionId:   h.condition_id,
-            conditionName: h.condition_name,
-            severity:      h.severity_level,
-            age:           String(h.age || ''),
-            gender:        h.gender || '',
-          })
-        }
-      })
-      .catch(() => {})
+    Promise.all([
+      api.me(),
+      api.getHealth().catch(() => null),
+      api.conditions(),
+      api.nodes().catch(() => []),
+    ]).then(([u, h, conds, ns]) => {
+      setUser(u)
+      setConditions(conds || [])
+      setNodes(ns || [])
+      setProfileForm({ full_name: u.full_name || '', email: u.email || '', node_id: u.node_id || '' })
+      if (h) {
+        setForm({
+          conditionId:   h.condition_id,
+          conditionName: h.condition_name,
+          severity:      h.severity_level,
+          age:           String(h.age || ''),
+          gender:        h.gender || '',
+        })
+      }
+    }).catch(() => {})
   }, [])
 
   function update(key, val) { setForm(f => ({ ...f, [key]: val })) }
@@ -76,6 +95,52 @@ export default function ProfileScreen({ route, navigation }) {
     setSaving(false)
   }
 
+  async function saveProfile() {
+    if (!profileForm.full_name.trim()) {
+      Alert.alert('Missing info', 'Full name is required.')
+      return
+    }
+    setProfileSaving(true)
+    setProfileMsg('')
+    try {
+      const updated = await api.updateProfile({
+        full_name: profileForm.full_name.trim(),
+        email:     profileForm.email.trim(),
+        node_id:   profileForm.node_id || null,
+      })
+      setUser(u => ({ ...u, ...updated }))
+      setProfileMsg('Profile updated successfully.')
+    } catch (e) {
+      Alert.alert('Error', e.message)
+    }
+    setProfileSaving(false)
+  }
+
+  async function changePassword() {
+    if (!pwForm.current || !pwForm.next) {
+      Alert.alert('Missing info', 'Fill in all password fields.')
+      return
+    }
+    if (pwForm.next !== pwForm.confirm) {
+      Alert.alert('Mismatch', 'New passwords do not match.')
+      return
+    }
+    if (pwForm.next.length < 6) {
+      Alert.alert('Too short', 'Password must be at least 6 characters.')
+      return
+    }
+    setPwSaving(true)
+    setPwMsg('')
+    try {
+      await api.changePassword({ current_password: pwForm.current, new_password: pwForm.next })
+      setPwMsg('Password changed successfully.')
+      setPwForm({ current: '', next: '', confirm: '' })
+    } catch (e) {
+      Alert.alert('Error', e.message)
+    }
+    setPwSaving(false)
+  }
+
   function logout() {
     Alert.alert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -87,6 +152,8 @@ export default function ProfileScreen({ route, navigation }) {
   }
 
   const conditionOptions = conditions.map(c => ({ value: c.condition_id, label: c.condition_name }))
+  const nodeOptions      = nodes.map(n => ({ value: n.node_id, label: `${n.location} (${n.node_id})` }))
+  const selectedNodeLabel = nodes.find(n => n.node_id === profileForm.node_id)?.location || profileForm.node_id || 'Select node'
 
   const age = parseInt(form.age) || 30
   const thresholds = getThresholds(form.conditionName, form.severity, age)
@@ -101,19 +168,11 @@ export default function ProfileScreen({ route, navigation }) {
         </View>
         <Text style={styles.name}>{user?.full_name ?? '—'}</Text>
         <Text style={styles.email}>{user?.email ?? '—'}</Text>
-        <View style={[styles.roleBadge, { backgroundColor: user?.role === 'admin' ? 'rgba(0,200,83,0.15)' : 'rgba(0,106,255,0.15)' }]}>
-          <Text style={[styles.roleText, { color: user?.role === 'admin' ? '#00C853' : '#006aff' }]}>
+        <View style={[styles.roleBadge, { backgroundColor: user?.role === 'admin' ? 'rgba(0,200,83,0.15)' : 'rgba(61,217,172,0.12)' }]}>
+          <Text style={[styles.roleText, { color: user?.role === 'admin' ? '#00C853' : '#3DD9AC' }]}>
             {user?.role?.toUpperCase() ?? 'USER'}
           </Text>
         </View>
-      </View>
-
-      {/* Account info */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Account</Text>
-        <InfoRow label="Node ID"             value={user?.node_id  || 'Not assigned'} />
-        <InfoRow label="Monitoring location" value={user?.location || 'Not assigned'} />
-        <InfoRow label="Email"               value={user?.email    || '—'} />
       </View>
 
       {/* AQI Threshold card */}
@@ -135,6 +194,46 @@ export default function ProfileScreen({ route, navigation }) {
         <Text style={styles.thresholdNote}>
           Push notifications trigger when AQI ≥ {thresholds.alert}
         </Text>
+      </View>
+
+      {/* Edit Profile */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Edit Profile</Text>
+
+        <Text style={styles.label}>Full name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Full name"
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          value={profileForm.full_name}
+          onChangeText={v => setProfileForm(f => ({ ...f, full_name: v }))}
+        />
+
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Email address"
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={profileForm.email}
+          onChangeText={v => setProfileForm(f => ({ ...f, email: v }))}
+        />
+
+        <Text style={styles.label}>Monitoring node</Text>
+        <TouchableOpacity style={styles.select} onPress={() => setNodeModal(true)}>
+          <Text style={styles.selectText}>{selectedNodeLabel}</Text>
+          <Text style={styles.arrow}>▾</Text>
+        </TouchableOpacity>
+
+        {!!profileMsg && <Text style={styles.success}>{profileMsg}</Text>}
+
+        <TouchableOpacity style={styles.saveBtn} onPress={saveProfile} disabled={profileSaving}>
+          {profileSaving
+            ? <ActivityIndicator color="#0a1a14" />
+            : <Text style={styles.saveBtnText}>Save profile</Text>
+          }
+        </TouchableOpacity>
       </View>
 
       {/* Health profile */}
@@ -180,8 +279,52 @@ export default function ProfileScreen({ route, navigation }) {
 
         <TouchableOpacity style={styles.saveBtn} onPress={saveHealth} disabled={saving}>
           {saving
-            ? <ActivityIndicator color="#fff" />
+            ? <ActivityIndicator color="#0a1a14" />
             : <Text style={styles.saveBtnText}>Save health profile</Text>
+          }
+        </TouchableOpacity>
+      </View>
+
+      {/* Change Password */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Change Password</Text>
+
+        <Text style={styles.label}>Current password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Current password"
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          secureTextEntry
+          value={pwForm.current}
+          onChangeText={v => setPwForm(f => ({ ...f, current: v }))}
+        />
+
+        <Text style={styles.label}>New password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="New password (min 6 chars)"
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          secureTextEntry
+          value={pwForm.next}
+          onChangeText={v => setPwForm(f => ({ ...f, next: v }))}
+        />
+
+        <Text style={styles.label}>Confirm new password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Repeat new password"
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          secureTextEntry
+          value={pwForm.confirm}
+          onChangeText={v => setPwForm(f => ({ ...f, confirm: v }))}
+        />
+
+        {!!pwMsg && <Text style={styles.success}>{pwMsg}</Text>}
+
+        <TouchableOpacity style={[styles.saveBtn, { backgroundColor: '#404040' }]} onPress={changePassword} disabled={pwSaving}>
+          {pwSaving
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={[styles.saveBtnText, { color: '#ffffff' }]}>Change password</Text>
           }
         </TouchableOpacity>
       </View>
@@ -191,6 +334,13 @@ export default function ProfileScreen({ route, navigation }) {
         <Text style={styles.logoutText}>Sign out</Text>
       </TouchableOpacity>
 
+      <SelectModal
+        visible={nodeModal}
+        title="Monitoring node"
+        options={nodeOptions}
+        onSelect={item => setProfileForm(f => ({ ...f, node_id: item.value }))}
+        onClose={() => setNodeModal(false)}
+      />
       <SelectModal
         visible={condModal}
         title="Health condition"
@@ -209,52 +359,40 @@ export default function ProfileScreen({ route, navigation }) {
   )
 }
 
-function InfoRow({ label, value }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  )
-}
-
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: '#060913' },
+  container:        { flex: 1, backgroundColor: '#0a0a0a' },
   content:          { padding: 16, paddingBottom: 40 },
-  section:          { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20, padding: 24, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  avatar:           { width: 72, height: 72, borderRadius: 36, backgroundColor: '#006aff', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  avatarText:       { fontSize: 32, fontWeight: '700', color: '#fff' },
+  section:          { alignItems: 'center', backgroundColor: '#161616', borderRadius: 20, padding: 24, marginBottom: 12 },
+  avatar:           { width: 72, height: 72, borderRadius: 36, backgroundColor: '#1e2e28', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: '#3DD9AC' },
+  avatarText:       { fontSize: 32, fontWeight: '700', color: '#3DD9AC' },
   name:             { fontSize: 20, fontWeight: '800', color: '#ffffff', marginBottom: 4 },
   email:            { fontSize: 14, color: 'rgba(255,255,255,0.45)', marginBottom: 10 },
   roleBadge:        { paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20 },
   roleText:         { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
-  card:             { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  card:             { backgroundColor: '#161616', borderRadius: 18, padding: 16, marginBottom: 12 },
   cardTitle:        { fontSize: 16, fontWeight: '700', color: '#ffffff', marginBottom: 14 },
-  infoRow:          { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  infoLabel:        { fontSize: 13, color: 'rgba(255,255,255,0.45)' },
-  infoValue:        { fontSize: 13, fontWeight: '600', color: '#ffffff', flexShrink: 1, textAlign: 'right', marginLeft: 12 },
-  thresholdCard:    { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  thresholdCard:    { backgroundColor: '#161616', borderRadius: 18, padding: 16, marginBottom: 12 },
   thresholdTitle:   { fontSize: 16, fontWeight: '700', color: '#ffffff', marginBottom: 2 },
   thresholdSub:     { fontSize: 12, color: 'rgba(255,255,255,0.40)', marginBottom: 14 },
   thresholdRow:     { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  thresholdBox:     { flex: 1, borderWidth: 2, borderRadius: 14, padding: 14, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' },
-  thresholdLabel:   { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.55)', marginBottom: 6 },
+  thresholdBox:     { flex: 1, borderWidth: 1.5, borderRadius: 14, padding: 14, alignItems: 'center', backgroundColor: '#0f0f0f' },
+  thresholdLabel:   { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.50)', marginBottom: 6 },
   thresholdVal:     { fontSize: 34, fontWeight: '900', marginBottom: 2 },
-  thresholdDesc:    { fontSize: 11, color: 'rgba(255,255,255,0.40)', textAlign: 'center' },
-  thresholdNote:    { fontSize: 12, color: 'rgba(255,255,255,0.45)', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 8 },
-  label:            { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginBottom: 6, marginTop: 12 },
-  select:           { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, backgroundColor: 'rgba(255,255,255,0.07)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  thresholdDesc:    { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center' },
+  thresholdNote:    { fontSize: 12, color: 'rgba(255,255,255,0.40)', textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 8 },
+  label:            { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.45)', marginBottom: 6, marginTop: 12 },
+  select:           { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, backgroundColor: '#1e1e1e', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   selectText:       { fontSize: 15, color: '#ffffff' },
-  arrow:            { fontSize: 16, color: 'rgba(255,255,255,0.4)' },
-  input:            { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.16)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.07)' },
+  arrow:            { fontSize: 16, color: 'rgba(255,255,255,0.35)' },
+  input:            { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: '#ffffff', backgroundColor: '#1e1e1e' },
   genderRow:        { flexDirection: 'row', gap: 8, marginTop: 0 },
-  genderBtn:        { flex: 1, paddingVertical: 11, borderRadius: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)' },
-  genderActive:     { borderColor: '#006aff', backgroundColor: 'rgba(0,106,255,0.15)' },
-  genderText:       { fontSize: 14, color: 'rgba(255,255,255,0.45)', fontWeight: '600' },
-  genderTextActive: { color: '#006aff' },
-  success:          { color: '#10d343', fontSize: 13, fontWeight: '600', marginTop: 12 },
-  saveBtn:          { backgroundColor: '#006aff', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
-  saveBtnText:      { color: '#fff', fontSize: 15, fontWeight: '700' },
-  logoutBtn:        { backgroundColor: 'rgba(239,83,80,0.10)', borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(239,83,80,0.30)' },
-  logoutText:       { color: '#EF5350', fontSize: 15, fontWeight: '700' },
+  genderBtn:        { flex: 1, paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', backgroundColor: '#1e1e1e' },
+  genderActive:     { borderColor: '#3DD9AC', backgroundColor: 'rgba(61,217,172,0.12)' },
+  genderText:       { fontSize: 14, color: 'rgba(255,255,255,0.40)', fontWeight: '600' },
+  genderTextActive: { color: '#3DD9AC' },
+  success:          { color: '#3DD9AC', fontSize: 13, fontWeight: '600', marginTop: 12 },
+  saveBtn:          { backgroundColor: '#3DD9AC', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
+  saveBtnText:      { color: '#0a1a14', fontSize: 15, fontWeight: '800' },
+  logoutBtn:        { backgroundColor: 'rgba(255,107,107,0.08)', borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,107,107,0.25)' },
+  logoutText:       { color: '#FF6B6B', fontSize: 15, fontWeight: '700' },
 })

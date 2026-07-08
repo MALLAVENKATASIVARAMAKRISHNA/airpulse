@@ -8,46 +8,49 @@ export default function PollutantCard({ label, value = 0, unit, limit, color, su
   const sevColor = getSeverityColor(value, limit)
 
   return (
-    <View style={styles.card}>
-      <View style={styles.top}>
-        <View style={[styles.dot, { backgroundColor: color }]} />
-        <Text style={styles.name}>{label}</Text>
+    <View style={s.card}>
+      <View style={s.top}>
+        <View style={[s.colorBar, { backgroundColor: color }]} />
+        <Text style={s.name}>{label}</Text>
         {subAqi > 0 && (
-          <View style={[styles.subBadge, { backgroundColor: color + '28' }]}>
-            <Text style={[styles.subText, { color }]}>Sub-AQI {subAqi}</Text>
+          <View style={[s.subBadge, { backgroundColor: color + '22' }]}>
+            <Text style={[s.subText, { color }]}>Sub-AQI {subAqi}</Text>
           </View>
         )}
       </View>
 
-      <Text style={[styles.value, { color }]}>
-        {typeof value === 'number' ? value.toFixed(1) : '—'}
-        <Text style={styles.unit}> {unit}</Text>
-      </Text>
-
-      <View style={styles.barTrack}>
-        <View style={[styles.barFill, { width: `${ratio * 100}%`, backgroundColor: color }]} />
+      <View style={s.valueRow}>
+        <Text style={[s.value, { color }]}>
+          {typeof value === 'number' ? value.toFixed(1) : '—'}
+        </Text>
+        <Text style={s.unit}>{unit}</Text>
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.limitText}>Limit: {limit} {unit}</Text>
-        <Text style={[styles.sevLabel, { color: sevColor }]}>{sevLabel}</Text>
+      <View style={s.barTrack}>
+        <View style={[s.barFill, { width: `${ratio * 100}%`, backgroundColor: color }]} />
+      </View>
+
+      <View style={s.footer}>
+        <Text style={s.limitText}>Limit {limit} {unit}</Text>
+        <Text style={[s.sevLabel, { color: sevColor }]}>{sevLabel}</Text>
       </View>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  card:     { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
-  top:      { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  dot:      { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
+const s = StyleSheet.create({
+  card:     { backgroundColor: '#161616', borderRadius: 18, padding: 18, marginBottom: 10 },
+  top:      { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
+  colorBar: { width: 4, height: 18, borderRadius: 2 },
   name:     { fontSize: 15, fontWeight: '700', color: '#ffffff', flex: 1 },
-  subBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  subBadge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 8 },
   subText:  { fontSize: 11, fontWeight: '600' },
-  value:    { fontSize: 30, fontWeight: '800', marginBottom: 10 },
-  unit:     { fontSize: 14, fontWeight: '400', color: 'rgba(255,255,255,0.45)' },
-  barTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 3, marginBottom: 8, overflow: 'hidden' },
-  barFill:  { height: 6, borderRadius: 3 },
-  footer:   { flexDirection: 'row', justifyContent: 'space-between' },
-  limitText:{ fontSize: 12, color: 'rgba(255,255,255,0.45)' },
+  valueRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginBottom: 14 },
+  value:    { fontSize: 32, fontWeight: '800' },
+  unit:     { fontSize: 13, color: 'rgba(255,255,255,0.40)', marginBottom: 4, fontWeight: '500' },
+  barTrack: { height: 5, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, marginBottom: 10, overflow: 'hidden' },
+  barFill:  { height: 5, borderRadius: 3 },
+  footer:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  limitText:{ fontSize: 12, color: 'rgba(255,255,255,0.35)' },
   sevLabel: { fontSize: 12, fontWeight: '700' },
 })

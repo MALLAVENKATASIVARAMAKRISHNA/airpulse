@@ -1,70 +1,88 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
-import Svg, { Circle, Text as SvgText } from 'react-native-svg'
+import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg'
 import { getAqiMeta } from '../lib/airQuality'
 
-const SIZE = 220
-const STROKE = 18
-const R = (SIZE - STROKE) / 2
-const CX = SIZE / 2
-const CY = SIZE / 2
-const CIRC = 2 * Math.PI * R
-const GAUGE = CIRC * (240 / 360)
-const GAP   = CIRC - GAUGE
+const SIZE   = 240
+const CX     = SIZE / 2
+const CY     = SIZE / 2
+const R      = 95
+const SW     = 16
+const START  = 150
+const END    = 390
+
+function polarToXY(angleDeg, r) {
+  const rad = (angleDeg * Math.PI) / 180
+  return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) }
+}
+
+function arcPath(startDeg, endDeg, r) {
+  const s   = polarToXY(startDeg, r)
+  const e   = polarToXY(endDeg,   r)
+  const large = endDeg - startDeg > 180 ? 1 : 0
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`
+}
 
 export default function AqiGauge({ aqi = 0 }) {
   const meta     = getAqiMeta(aqi)
-  const progress = GAUGE * Math.min(aqi / 500, 1)
+  const fillEnd  = START + (END - START) * Math.min(aqi / 500, 1)
 
   return (
     <View style={styles.wrap}>
-      <Svg width={SIZE} height={SIZE}>
-        <Circle
-          cx={CX} cy={CY} r={R}
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        {/* Track */}
+        <Path
+          d={arcPath(START, END, R)}
           fill="none"
-          stroke="rgba(255,255,255,0.10)"
-          strokeWidth={STROKE}
-          strokeDasharray={`${GAUGE} ${GAP}`}
+          stroke="#1e1e1e"
+          strokeWidth={SW}
           strokeLinecap="round"
-          transform={`rotate(150, ${CX}, ${CY})`}
         />
-        <Circle
-          cx={CX} cy={CY} r={R}
+        {/* Fill */}
+        <Path
+          d={arcPath(START, fillEnd, R)}
           fill="none"
           stroke={meta.color}
-          strokeWidth={STROKE}
-          strokeDasharray={`${progress} ${CIRC - progress}`}
+          strokeWidth={SW}
           strokeLinecap="round"
-          transform={`rotate(150, ${CX}, ${CY})`}
         />
+        {/* AQI number */}
         <SvgText
-          x={CX} y={CY + 6}
+          x={CX}
+          y={CY - 8}
           textAnchor="middle"
-          fontSize={52}
-          fontWeight="bold"
-          fill={meta.color}
+          fontSize={54}
+          fontWeight="800"
+          fill="#ffffff"
         >
           {aqi}
         </SvgText>
+        {/* Label */}
         <SvgText
-          x={CX} y={CY + 30}
+          x={CX}
+          y={CY + 26}
           textAnchor="middle"
-          fontSize={13}
-          fill="rgba(255,255,255,0.45)"
+          fontSize={17}
+          fontWeight="700"
+          fill={meta.color}
         >
-          AQI
+          {meta.label}
+        </SvgText>
+        {/* Unit */}
+        <SvgText
+          x={CX}
+          y={CY + 48}
+          textAnchor="middle"
+          fontSize={11}
+          fill="rgba(255,255,255,0.35)"
+        >
+          AQI · CPCB Scale
         </SvgText>
       </Svg>
-
-      <View style={[styles.badge, { backgroundColor: meta.color + '28' }]}>
-        <Text style={[styles.label, { color: meta.color }]}>{meta.label}</Text>
-      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  wrap:  { alignItems: 'center' },
-  badge: { marginTop: 4, paddingHorizontal: 20, paddingVertical: 6, borderRadius: 20 },
-  label: { fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
+  wrap: { alignItems: 'center', justifyContent: 'center' },
 })
