@@ -188,7 +188,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
 
   useEffect(() => {
     load()
-    const intervalTime = live ? 15000 : 5000
+    const intervalTime = live ? 15000 : 2000
     const id = setInterval(load, intervalTime)
     return () => clearInterval(id)
   }, [load, live])

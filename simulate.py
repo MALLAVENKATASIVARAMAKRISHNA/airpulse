@@ -166,7 +166,7 @@ def simulate_node(client, node):
                   f"Dominant: {reading['dominant_pollutant']:<6}  → {topic}")
         except Exception as e:
             print(f"[{node['name']}] Error: {e}")
-        time.sleep(5)
+        time.sleep(2)
 
 # ── Main ──────────────────────────────────────────────────────
 if __name__ == "__main__":

@@ -137,10 +137,10 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
     setLoading(false)
   }, [profile.node_id, live])
 
-  // Initial load + history refresh (5s fallback if WebSocket is not live, 5m otherwise)
+  // Initial load + history refresh (2s fallback if WebSocket is not live, 5m otherwise)
   useEffect(() => {
     loadHistory()
-    const intervalTime = live ? 300000 : 5000
+    const intervalTime = live ? 300000 : 2000
     const id = setInterval(loadHistory, intervalTime)
     return () => clearInterval(id)
   }, [loadHistory, live])

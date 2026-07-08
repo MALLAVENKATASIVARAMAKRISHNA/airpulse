@@ -68,7 +68,7 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
 
   useEffect(() => {
     load()
-    const id = setInterval(load, 5000)
+    const id = setInterval(load, 2000)
     return () => clearInterval(id)
   }, [])
 

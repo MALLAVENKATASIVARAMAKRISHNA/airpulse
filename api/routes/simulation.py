@@ -214,7 +214,7 @@ def simulation_loop():
 
 # ── Routes ───────────────────────────────────────────────────
 class StartRequest(BaseModel):
-    interval_seconds: int = 5
+    interval_seconds: int = 2
 
 class OverrideRequest(BaseModel):
     node_id: str
@@ -241,7 +241,7 @@ def start_sim(data: StartRequest, current_user=Depends(admin_only)):
     if sim.running:
         return {'ok': True, 'message': 'Already running'}
     sim.running  = True
-    sim.interval = 5
+    sim.interval = 2
     sim.thread   = threading.Thread(target=simulation_loop, daemon=True)
     sim.thread.start()
     return {'ok': True, 'message': f'Simulation started — interval {sim.interval}s'}
