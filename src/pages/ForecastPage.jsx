@@ -104,11 +104,6 @@ export default function ForecastPage({ profile, currentAqi = 0, mlData = null, h
           </h1>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-white/40 text-sm">AI-powered predictions · GradientBoosting model</p>
-            {isLive && (
-              <span className="flex items-center gap-1 text-xs text-green-400 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full animate-pulse">
-                <Zap size={10} /> Live from Lambda
-              </span>
-            )}
           </div>
         </div>
       </div>
