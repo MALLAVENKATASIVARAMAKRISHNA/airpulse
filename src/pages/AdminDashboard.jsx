@@ -36,7 +36,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
   const [userCount, setUserCount] = useState(0)
   const [anomalies, setAnomalies] = useState([])
   const [simStatus, setSimStatus] = useState(null)
-  const [simInterval, setSimInterval] = useState(30)
+  const SIM_INTERVAL = 5
   const [simLog,    setSimLog]    = useState([])
   const [overrides, setOverrides] = useState({})
   const [loading,   setLoading]   = useState(true)
@@ -214,7 +214,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
 
   useEffect(() => { if (tab==='users') loadUsers() }, [tab, loadUsers])
 
-  async function startSim()  { try { await api.simStart(simInterval); await load(); setSimLog(l=>[`▶ Simulation started (${simInterval}s interval)`,...l.slice(0,49)]) } catch(e){setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)])} }
+  async function startSim()  { try { await api.simStart(SIM_INTERVAL); await load(); setSimLog(l=>[`▶ Simulation started (${SIM_INTERVAL}s interval)`,...l.slice(0,49)]) } catch(e){setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)])} }
   async function stopSim()   { try { await api.simStop();              await load(); setSimLog(l=>['⏹ Simulation stopped',...l.slice(0,49)]) } catch(e){setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)])} }
 
   async function insertReading(node_id, location) {
@@ -859,11 +859,6 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
             ${simStatus?.running?'text-brandGreen border-brandGreen/30 bg-brandGreen/10':'text-white/40 border-white/10'}`}>
             <span className={`w-2 h-2 rounded-full ${simStatus?.running?'bg-brandGreen animate-pulse':'bg-white/20'}`}/>
             {simStatus?.running?'Running':'Stopped'}
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-white/40">Interval (s)</label>
-            <input type="number" value={simInterval} onChange={e=>setSimInterval(parseInt(e.target.value)||30)} min={5} max={300}
-              className="w-20 bg-white/5 border border-white/10 rounded-btn px-3 py-1.5 text-sm text-white outline-none focus:border-brandCyan/40"/>
           </div>
           <button onClick={startSim} disabled={simStatus?.running}
             className="flex items-center gap-2 px-4 py-2 bg-brandGreen/20 border border-brandGreen/30 text-brandGreen rounded-btn text-sm font-semibold hover:bg-brandGreen/30 transition-all disabled:opacity-40">
