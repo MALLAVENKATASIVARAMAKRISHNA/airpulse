@@ -125,9 +125,12 @@ def build_features(r, node_id):
 # ── DB writes ────────────────────────────────────────────────
 def insert_reading(r, node_id, is_anomaly, cause):
     pm25,pm10,co,no2,ozone = r.get('pm25',0),r.get('pm10',0),r.get('co',0),r.get('no2',0),r.get('ozone',0)
+    nh3 = r.get('nh3', 0)
+    NH3_BP = [(0,200,0,50),(200,400,51,100),(400,800,101,200),(800,1200,201,300),(1200,1800,301,400),(1800,2000,401,500)]
     subs = {
         'PM2.5':sub_aqi(pm25,PM25_BP),'PM10':sub_aqi(pm10,PM10_BP),
         'CO':sub_aqi(co,CO_BP),'NO2':sub_aqi(no2,NO2_BP),'Ozone':sub_aqi(ozone,OZONE_BP),
+        'NH3':sub_aqi(nh3,NH3_BP)
     }
     dom = max(subs, key=subs.get)
     conn = get_db()
@@ -140,9 +143,9 @@ def insert_reading(r, node_id, is_anomaly, cause):
         ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
         RETURNING reading_id
     """, (
-        node_id,r['aqi'],pm25,pm10,co,r.get('nh3',0),no2,ozone,
+        node_id,r['aqi'],pm25,pm10,co,nh3,no2,ozone,
         r.get('co2',0),r.get('voc',0),r.get('smoke',0),
-        subs['PM2.5'],subs['PM10'],subs['CO'],0,subs['NO2'],subs['Ozone'],
+        subs['PM2.5'],subs['PM10'],subs['CO'],subs['NH3'],subs['NO2'],subs['Ozone'],
         dom, cause, is_anomaly,
     ))
     reading_id = cur.fetchone()[0]
@@ -255,6 +258,8 @@ def lambda_handler(event, context):
         event['ozone'] = vary(base['ozone'])
     if event.get('no2', 0) == 0:
         event['no2'] = vary(base['no2'])
+    if event.get('co2', 0) == 0:
+        event['co2'] = vary(base['co2'])
     if event.get('nh3', 0) == 0:
         event['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
     if event.get('voc', 0) == 0:
@@ -262,6 +267,8 @@ def lambda_handler(event, context):
     if event.get('smoke', 0) == 0:
         event['smoke'] = vary(base['smoke'])
         
+    NH3_BP = [(0,200,0,50),(200,400,51,100),(400,800,101,200),(800,1200,201,300),(1200,1800,301,400),(1800,2000,401,500)]
+
     # Re-evaluate AQI if it is zero or only based on partial physical sensors
     subs = {
         'PM2.5': sub_aqi(event['pm25'],  PM25_BP),
@@ -269,6 +276,7 @@ def lambda_handler(event, context):
         'CO':    sub_aqi(event.get('co', 0), CO_BP),
         'NO2':   sub_aqi(event['no2'],   NO2_BP),
         'Ozone': sub_aqi(event['ozone'], OZONE_BP),
+        'NH3':   sub_aqi(event['nh3'],   NH3_BP),
     }
     if event.get('aqi', 0) == 0 or event['aqi'] == subs['CO']:
         event['aqi'] = max(subs.values())

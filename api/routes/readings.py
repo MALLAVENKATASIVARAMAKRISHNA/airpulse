@@ -54,6 +54,8 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
         reading_dict['ozone'] = vary(base['ozone'])
     if reading_dict.get('no2', 0) == 0:
         reading_dict['no2'] = vary(base['no2'])
+    if reading_dict.get('co2', 0) == 0:
+        reading_dict['co2'] = vary(base['co2'])
     if reading_dict.get('nh3', 0) == 0:
         reading_dict['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
     if reading_dict.get('voc', 0) == 0:
@@ -61,6 +63,8 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
     if reading_dict.get('smoke', 0) == 0:
         reading_dict['smoke'] = vary(base['smoke'])
         
+    NH3_BP = [(0,200,0,50),(200,400,51,100),(400,800,101,200),(800,1200,201,300),(1200,1800,301,400),(1800,2000,401,500)]
+
     # Recompute sub-AQIs for the complete dataset
     subs = {
         'PM2.5': sub_aqi(reading_dict['pm25'],  PM25_BP),
@@ -68,6 +72,7 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
         'CO':    sub_aqi(reading_dict['co'],    CO_BP),
         'NO2':   sub_aqi(reading_dict['no2'],   NO2_BP),
         'Ozone': sub_aqi(reading_dict['ozone'], OZONE_BP),
+        'NH3':   sub_aqi(reading_dict['nh3'],   NH3_BP),
     }
     dominant = max(subs, key=subs.get)
     
@@ -76,6 +81,7 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
     reading_dict['sub_aqi_co'] = subs['CO']
     reading_dict['sub_aqi_no2'] = subs['NO2']
     reading_dict['sub_aqi_ozone'] = subs['Ozone']
+    reading_dict['sub_aqi_nh3'] = subs['NH3']
     reading_dict['dominant_pollutant'] = dominant
     
     if reading_dict.get('aqi', 0) == 0 or reading_dict['aqi'] == subs['CO']:
@@ -89,17 +95,14 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
     row = query("""
         INSERT INTO aqi_readings (
             node_id, aqi, pm25, pm10, co, nh3, no2, ozone, co2, voc, smoke,
-            sub_aqi_pm25, sub_aqi_pm10, sub_aqi_co, sub_aqi_nh3,
-            sub_aqi_no2, sub_aqi_ozone, dominant_pollutant, cause, is_anomaly, recorded_at
+            sub_aqi_pm25, sub_aqi_pm10, sub_aqi_co, sub_aqi_nh3, sub_aqi_no2, sub_aqi_ozone,
+            dominant_pollutant, cause, is_anomaly, recorded_at
         ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
         RETURNING *
     """, (
-        reading_dict['node_id'], reading_dict['aqi'], reading_dict['pm25'], reading_dict['pm10'],
-        reading_dict['co'], reading_dict['nh3'], reading_dict['no2'], reading_dict['ozone'],
-        reading_dict['co2'], reading_dict['voc'], reading_dict['smoke'],
-        reading_dict['sub_aqi_pm25'], reading_dict['sub_aqi_pm10'], reading_dict['sub_aqi_co'],
-        reading_dict['sub_aqi_nh3'], reading_dict['sub_aqi_no2'], reading_dict['sub_aqi_ozone'],
-        reading_dict['dominant_pollutant'], final_cause, is_anomaly
+        node_id, reading_dict['aqi'], reading_dict['pm25'], reading_dict['pm10'], reading_dict['co'], reading_dict['nh3'], reading_dict['no2'], reading_dict['ozone'], reading_dict['co2'], reading_dict['voc'], reading_dict['smoke'],
+        reading_dict['sub_aqi_pm25'], reading_dict['sub_aqi_pm10'], reading_dict['sub_aqi_co'], reading_dict['sub_aqi_nh3'], reading_dict['sub_aqi_no2'], reading_dict['sub_aqi_ozone'],
+        dominant, final_cause, is_anomaly
     ), fetch='one')
 
     # Update predictions table
