@@ -45,6 +45,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
 
   const [selectedNode, setSelectedNode] = useState(null)
   const [nodeReadings, setNodeReadings] = useState([])
+  const [nodePredictions, setNodePredictions] = useState([])
   const [nodeLoading,  setNodeLoading]  = useState(false)
 
   const [userSubTab, setUserSubTab] = useState('users') // 'users' or 'authority'
@@ -180,8 +181,12 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
     setSelectedNode(node)
     setNodeLoading(true)
     try {
-      const res = await api.nodeReadings(node.node_id)
-      setNodeReadings((res || []).slice(0, 24).reverse())
+      const [hist, preds] = await Promise.all([
+        api.nodeReadings(node.node_id),
+        api.predictions(node.node_id)
+      ])
+      setNodeReadings((hist || []).slice(0, 24).reverse())
+      setNodePredictions(preds || [])
     } catch {}
     setNodeLoading(false)
   }
@@ -348,7 +353,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
                 <div className="mt-4 p-3 bg-white/5 border border-white/5 rounded-btn inline-block">
                   <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider block">Cause of Pollution</span>
                   <span className="text-xs text-white/80 font-medium">
-                    {selectedNode.cause || 'Automobile emissions & industrial output'}
+                    {nodeReadings[nodeReadings.length - 1]?.cause || selectedNode.cause || 'Automobile emissions & industrial output'}
                   </span>
                 </div>
               </div>
@@ -468,6 +473,29 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
                       </div>
                     )
                   })}
+                </div>
+
+                {/* AQI Predictions (ML Forecast) */}
+                <div className="glass-card p-6 mt-6">
+                  <p className="text-xs text-white/40 uppercase tracking-wide mb-4">AQI Predictions (ML Forecast)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {['6h', '24h', '48h'].map(horizon => {
+                      const pred = nodePredictions.find(p => p.horizon === horizon)
+                      const aqiVal = pred ? pred.predicted_aqi : null
+                      const meta = aqiVal !== null ? aqiMeta(aqiVal) : { label: 'N/A', color: '#94a3b8' }
+                      return (
+                        <div key={horizon} className="bg-white/5 border border-white/5 p-4 rounded-btn text-center">
+                          <div className="text-xs text-white/40 mb-1">{horizon} Outlook</div>
+                          <div className="text-2xl font-black" style={{ color: meta.color }}>
+                            {aqiVal !== null ? aqiVal : '—'}
+                          </div>
+                          <div className="text-[9px] font-bold mt-1 uppercase" style={{ color: meta.color }}>
+                            {meta.label}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </>
             )}
