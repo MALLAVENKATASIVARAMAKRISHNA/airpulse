@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Globe, MapPin, Zap, RefreshCw, LogOut, ShieldAlert, Users, Activity, Sun, Moon } from 'lucide-react'
 import Logo from '../components/Logo'
 import { api } from '../lib/api'
@@ -44,6 +44,105 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
   const [selectedNode, setSelectedNode] = useState(null)
   const [nodeReadings, setNodeReadings] = useState([])
   const [nodeLoading,  setNodeLoading]  = useState(false)
+
+  const mapRef = useRef(null)
+  const markersRef = useRef([])
+  const mapContainerRef = useRef(null)
+
+  // Manage Leaflet Map lifecycle for district nodes tab
+  useEffect(() => {
+    // Only initialize map if we are on the nodes list tab and there are nodes to display
+    if (tab !== 'nodes' || selectedNode || !window.L || loading || !sorted.length) {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+        markersRef.current = []
+      }
+      return
+    }
+
+    // Initialize Map if not present
+    if (!mapRef.current && mapContainerRef.current) {
+      const firstWithCoords = sorted.find(n => n.latitude && n.longitude)
+      const centerLat = firstWithCoords ? parseFloat(firstWithCoords.latitude) : 13.0827
+      const centerLng = firstWithCoords ? parseFloat(firstWithCoords.longitude) : 80.2707
+
+      const map = window.L.map(mapContainerRef.current, {
+        center: [centerLat, centerLng],
+        zoom: 11,
+        zoomControl: false
+      })
+
+      window.L.control.zoom({ position: 'bottomright' }).addTo(map)
+
+      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 20
+      }).addTo(map)
+
+      mapRef.current = map
+    }
+
+    const map = mapRef.current
+    if (!map) return
+
+    // Clear old markers
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current = []
+
+    // Plot markers for each node
+    sorted.forEach(node => {
+      if (!node.latitude || !node.longitude) return
+
+      const meta = aqiMeta(node.aqi || 0)
+
+      const icon = window.L.divIcon({
+        className: 'custom-map-marker',
+        html: `
+          <div class="map-badge" style="color: ${meta.color}; border-color: ${meta.color}; box-shadow: 0 0 10px ${meta.color}30, inset 0 0 8px ${meta.color}20;">
+            <span class="map-badge-val">${node.aqi || 0}</span>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      })
+
+      const marker = window.L.marker([node.latitude, node.longitude], { icon })
+
+      const popupHtml = `
+        <div class="map-popup-card">
+          <div class="map-popup-header">
+            <h4 style="font-weight: 700; margin: 0; font-size: 13px; color: white;">${node.location}</h4>
+            <span class="map-popup-badge" style="color: ${meta.color}; background: ${meta.color}15; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">${meta.label}</span>
+          </div>
+          <div class="map-popup-aqi" style="color: ${meta.color}; font-size: 20px; font-weight: 900; margin-top: 4px;">${node.aqi || 0} <span class="map-popup-unit" style="font-size: 10px; color: rgba(255,255,255,0.4)">AQI</span></div>
+        </div>
+      `
+
+      marker.bindPopup(popupHtml, {
+        closeButton: false,
+        className: 'leaflet-custom-popup',
+        offset: [0, -10]
+      })
+
+      marker.on('click', () => {
+        selectNodeDetail(node)
+      })
+
+      marker.addTo(map)
+      markersRef.current.push(marker)
+    })
+  }, [tab, selectedNode, sorted, loading])
+
+  // Cleanup map on unmount
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, [])
 
   async function load() {
     try {
@@ -372,31 +471,40 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
                   })()}
                 </div>
               ) : (
-                <div className="space-y-3 animate-fadeIn">
-                  {sorted.length > 0 ? (
-                    sorted.map((node, i) => {
-                      const m = aqiMeta(node.aqi || 0)
-                      return (
-                        <div key={node.node_id} onClick={() => selectNodeDetail(node)}
-                          className="glass-card p-5 flex items-center gap-4 cursor-pointer hover:border-brandCyan/40 active:scale-[0.99] transition-all">
-                          <div className="w-9 h-9 rounded-btn flex items-center justify-center text-sm font-black" style={{ background: m.color + '20', color: m.color }}>#{i+1}</div>
-                          <div className="flex-1">
-                            <p className="text-sm font-bold text-white">{node.location}</p>
-                            <p className="text-xs text-white/40">{node.district}, {node.state}</p>
-                            <div className="h-1.5 bg-white/10 rounded-full mt-2 overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${Math.min((node.aqi||0)/500*100,100)}%`, background: m.color }} />
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Map Header */}
+                  {sorted.length > 0 && (
+                    <div className="glass-card p-4 relative overflow-hidden">
+                      <div ref={mapContainerRef} className="w-full h-80 rounded-[12px] bg-slate-950 border border-white/5 relative z-10" />
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    {sorted.length > 0 ? (
+                      sorted.map((node, i) => {
+                        const m = aqiMeta(node.aqi || 0)
+                        return (
+                          <div key={node.node_id} onClick={() => selectNodeDetail(node)}
+                            className="glass-card p-5 flex items-center gap-4 cursor-pointer hover:border-brandCyan/40 active:scale-[0.99] transition-all">
+                            <div className="w-9 h-9 rounded-btn flex items-center justify-center text-sm font-black" style={{ background: m.color + '20', color: m.color }}>#{i+1}</div>
+                            <div className="flex-1">
+                              <p className="text-sm font-bold text-white">{node.location}</p>
+                              <p className="text-xs text-white/40">{node.district}, {node.state}</p>
+                              <div className="h-1.5 bg-white/10 rounded-full mt-2 overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.min((node.aqi||0)/500*100,100)}%`, background: m.color }} />
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-3xl font-black" style={{ color: m.color }}>{node.aqi||0}</div>
+                              <div className="text-xs font-semibold" style={{ color: m.color }}>{m.label}</div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-3xl font-black" style={{ color: m.color }}>{node.aqi||0}</div>
-                            <div className="text-xs font-semibold" style={{ color: m.color }}>{m.label}</div>
-                          </div>
-                        </div>
-                      )
-                    })
-                  ) : (
-                    <div className="glass-card p-10 text-center text-white/30">No nodes found in your assigned district.</div>
-                  )}
+                        )
+                      })
+                    ) : (
+                      <div className="glass-card p-10 text-center text-white/30">No nodes found in your assigned district.</div>
+                    )}
+                  </div>
                 </div>
               )
             )}
