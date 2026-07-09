@@ -335,7 +335,7 @@ def lambda_handler(event, context):
     location = LOCATIONS.get(node_id, node_id)
     notify(node_id, event['aqi'], location)
 
-    # Publish ML results to IoT Core → dashboard receives via WebSocket
+    # Publish ML results and Clean Readings to IoT Core → dashboard receives via WebSocket
     ml_payload = {
         'node_id':    node_id,
         'is_anomaly': is_anomaly,
@@ -346,14 +346,42 @@ def lambda_handler(event, context):
         },
         'dominant_pollutant': dominant,
     }
+    
+    clean_payload = {
+        'node_id':            node_id,
+        'aqi':                event['aqi'],
+        'pm25':               event['pm25'],
+        'pm10':               event['pm10'],
+        'co':                 event.get('co', 0),
+        'nh3':                event.get('nh3', 0),
+        'no2':                event['no2'],
+        'ozone':              event['ozone'],
+        'co2':                event.get('co2', 0),
+        'voc':                event.get('voc', 0),
+        'smoke':              event.get('smoke', 0),
+        'sub_aqi_pm25':       subs['PM2.5'],
+        'sub_aqi_pm10':       subs['PM10'],
+        'sub_aqi_co':         subs['CO'],
+        'sub_aqi_nh3':        0,
+        'sub_aqi_no2':        subs['NO2'],
+        'sub_aqi_ozone':      subs['Ozone'],
+        'dominant_pollutant': dominant,
+        'cause':              predicted_cause
+    }
+
     try:
         IOT.publish(
             topic=f'airpulse/ml/{node_id}',
             qos=0,
             payload=json.dumps(ml_payload),
         )
+        IOT.publish(
+            topic=f'airpulse/clean_readings/{node_id}',
+            qos=0,
+            payload=json.dumps(clean_payload),
+        )
     except Exception as e:
-        print(f'IoT ML publish error: {e}')
+        print(f'IoT publish error: {e}')
 
     print(f"[{node_id}] AQI={event['aqi']} anomaly={is_anomaly} preds={preds}")
     return {'statusCode':200,'body':json.dumps({'reading_id':reading_id,'predictions':preds,'is_anomaly':is_anomaly})}

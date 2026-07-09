@@ -155,7 +155,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
       clientRef.current = client
 
       client.on('connect', () => {
-        client.subscribe(`airpulse/readings/${profile.node_id}`)
+        client.subscribe(`airpulse/clean_readings/${profile.node_id}`)
         client.subscribe(`airpulse/ml/${profile.node_id}`)
         setLive(true)
       })

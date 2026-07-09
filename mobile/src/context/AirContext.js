@@ -48,7 +48,7 @@ export function AirProvider({ user, children }) {
       })
 
       client.on('connect', () => {
-        client.subscribe('airpulse/readings/#')
+        client.subscribe('airpulse/clean_readings/#')
         client.subscribe('airpulse/ml/#')
         setLive(true)
         setLoading(false)
@@ -62,7 +62,7 @@ export function AirProvider({ user, children }) {
               setPredictions(data.predictions || {})
               setIsAnomaly(data.is_anomaly || false)
             }
-          } else {
+          } else if (topic.startsWith('airpulse/clean_readings/')) {
             setAllNodes(prev => prev.map(n => n.node_id === data.node_id ? { ...n, ...data } : n))
             if (data.node_id === user.node_id) {
               setReading(prev => ({ ...prev, ...data }))
