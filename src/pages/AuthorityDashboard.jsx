@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Globe, MapPin, Zap, RefreshCw, LogOut, ShieldAlert, Users, Activity, Sun, Moon } from 'lucide-react'
 import Logo from '../components/Logo'
 import { api } from '../lib/api'
+import AppShell from '../components/AppShell'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie } from 'recharts'
 
 function aqiMeta(aqi) {
@@ -194,49 +195,16 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
   const cpcbExceededNodes = nodes.filter(n => (n.aqi || 0) > 100)
 
   return (
-    <div className="flex h-screen bg-darkBg text-white overflow-hidden">
-      <div className="mesh-glow-blue" /><div className="mesh-glow-green" />
-
-      {/* Sidebar */}
-      <aside className="relative z-10 flex flex-col w-60 h-full border-r border-white/[0.06] bg-[#050a05] flex-shrink-0">
-        <div className="px-5 py-6 border-b border-white/[0.06]"><Logo /></div>
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {TABS.map(({ id, icon: Icon, label }) => (
-            <button key={id} onClick={() => { setTab(id); setSelectedNode(null); setNodeReadings([]) }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm font-medium transition-all text-left
-                ${tab === id ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
-              <Icon size={17}/>{label}
-            </button>
-          ))}
-        </nav>
-        <div className="px-3 pb-5 space-y-2 border-t border-white/[0.06] pt-4">
-          <div className="px-3 py-1.5 flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border text-purple-400 border-purple-400/30 bg-purple-400/10 w-max">
-              Authority
-            </span>
-            <p className="text-[10px] text-white/40 truncate font-semibold">
-              📍 {profile.district || 'All Districts'}, {profile.state || 'All States'}
-            </p>
-          </div>
-          <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all">
-            {theme === 'dark' ? <Sun size={17}/> : <Moon size={17}/>}
-            <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-          </button>
-          <button onClick={onSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all">
-            <LogOut size={17}/> Sign out
-          </button>
-        </div>
-      </aside>
-
-      <main className="relative z-10 flex-1 h-full overflow-y-auto p-8">
-        <div className="flex items-center justify-between mb-8">
+    <AppShell role="authority" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab} theme={theme} toggleTheme={toggleTheme}>
+      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-xs text-purple-400 uppercase tracking-widest font-semibold mb-1">
               {profile.district || 'National'} Jurisdiction
             </p>
-            <h1 className="text-2xl font-black text-white">Air Quality Authority Dashboard</h1>
+            <h1 className="text-xl md:text-2xl font-black text-white">Air Quality Authority Dashboard</h1>
           </div>
-          <button onClick={load} className="flex items-center gap-2 px-4 py-2 glass-card text-white/60 hover:text-white text-sm rounded-btn transition-all">
+          <button onClick={load} className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 glass-card text-white/60 hover:text-white text-sm rounded-btn transition-all">
             <RefreshCw size={14}/> Refresh
           </button>
         </div>
@@ -562,7 +530,7 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
             )}
           </>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   )
 }

@@ -26,7 +26,6 @@ const AUTHORITY_NAV = [
   { id: 'overview',  icon: Globe,     label: 'City Overview' },
   { id: 'nodes',     icon: MapPin,    label: 'All Nodes'     },
   { id: 'anomalies', icon: Zap,       label: 'Anomalies'     },
-  { id: 'alerts',    icon: Bell,      label: 'Alert Centre'  },
 ]
 
 export default function AppShell({ role, onSignOut, activeTab, onTabChange, theme, toggleTheme, children }) {

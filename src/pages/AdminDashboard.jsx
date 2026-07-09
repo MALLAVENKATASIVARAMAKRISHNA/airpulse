@@ -594,8 +594,8 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
           </p>
 
           {userSubTab === 'users' ? (
-            <div className="glass-card overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="glass-card overflow-x-auto">
+              <table className="w-full text-sm min-w-[700px]">
                 <thead>
                   <tr className="border-b border-white/[0.06]">
                     {['Name','Email','Node','Phone','Health Condition','Action'].map(h=>(
@@ -635,8 +635,8 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
               </table>
             </div>
           ) : (
-            <div className="glass-card overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="glass-card overflow-x-auto">
+              <table className="w-full text-sm min-w-[750px]">
                 <thead>
                   <tr className="border-b border-white/[0.06]">
                     {['Name','Email','Phone','State','District','Password','Action'].map(h=>(
