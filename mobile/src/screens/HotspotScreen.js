@@ -1,13 +1,30 @@
 import React from 'react'
-import { View, Text, ScrollView, RefreshControl, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, RefreshControl, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native'
+import MapView, { Marker } from 'react-native-maps'
 import { useAir } from '../context/AirContext'
 import { getAqiMeta } from '../lib/airQuality'
 import { api } from '../lib/api'
+
+// Sleek dark-themed map style coordinates
+const darkMapStyle = [
+  { "elementType": "geometry", "stylers": [{ "color": "#111216" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#747474" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#111216" }] },
+  { "featureType": "administrative", "elementType": "geometry.stroke", "stylers": [{ "color": "#28293d" }] },
+  { "featureType": "landscape.man_made", "elementType": "geometry.fill", "stylers": [{ "color": "#16161a" }] },
+  { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#1c1d24" }] },
+  { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#58586b" }] },
+  { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#1e2029" }] },
+  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#16161a" }] },
+  { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#282a36" }] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#0a0a0d" }] }
+]
 
 export default function HotspotScreen() {
   const { allNodes, user, loading, refresh } = useAir()
   const [refreshing, setRefreshing] = React.useState(false)
   const [clusters,   setClusters]   = React.useState([])
+  const mapRef = React.useRef(null)
 
   React.useEffect(() => {
     api.hotspots().then(setClusters).catch(() => {})
@@ -24,11 +41,23 @@ export default function HotspotScreen() {
     return clusters.find(c => c.node_ids?.includes(node_id))
   }
 
+  const handleNodePress = (node) => {
+    if (mapRef.current && node.latitude && node.longitude) {
+      mapRef.current.animateToRegion({
+        latitude: parseFloat(node.latitude),
+        longitude: parseFloat(node.longitude),
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 800)
+    }
+  }
+
   if (loading && !allNodes.length) return (
     <View style={s.center}><ActivityIndicator size="large" color="#3DD9AC" /></View>
   )
 
   const sorted = [...allNodes].sort((a, b) => (b.aqi ?? 0) - (a.aqi ?? 0))
+  const mapNodes = allNodes.filter(n => n.latitude && n.longitude)
 
   return (
     <ScrollView
@@ -39,6 +68,46 @@ export default function HotspotScreen() {
       <Text style={s.pageTitle}>Pollution Hotspots</Text>
       <Text style={s.pageSub}>All monitoring stations ranked by AQI</Text>
 
+      {/* Map Header */}
+      {mapNodes.length > 0 && (
+        <View style={s.mapContainer}>
+          <MapView
+            ref={mapRef}
+            style={s.map}
+            initialRegion={{
+              latitude: 13.0827,
+              longitude: 80.2707,
+              latitudeDelta: 0.18,
+              longitudeDelta: 0.18,
+            }}
+            customMapStyle={darkMapStyle}
+            showsUserLocation={false}
+            showsMyLocationButton={false}
+            showsCompass={false}
+          >
+            {mapNodes.map(node => {
+              const meta = getAqiMeta(node.aqi ?? 0)
+              return (
+                <Marker
+                  key={node.node_id}
+                  coordinate={{
+                    latitude: parseFloat(node.latitude),
+                    longitude: parseFloat(node.longitude)
+                  }}
+                  title={node.location}
+                  description={`AQI: ${node.aqi ?? 0} (${meta.label})`}
+                >
+                  <View style={[s.markerCircle, { backgroundColor: meta.color }]}>
+                    <Text style={s.markerText}>{node.aqi ?? 0}</Text>
+                  </View>
+                </Marker>
+              )
+            })}
+          </MapView>
+        </View>
+      )}
+
+      {/* Ranked List */}
       {sorted.map((node, i) => {
         const aqi     = node.aqi ?? 0
         const meta    = getAqiMeta(aqi)
@@ -46,7 +115,12 @@ export default function HotspotScreen() {
         const cluster = clusterForNode(node.node_id)
 
         return (
-          <View key={node.node_id} style={[s.card, isUser && { borderColor: '#3DD9AC', borderWidth: 1.5 }]}>
+          <TouchableOpacity 
+            key={node.node_id} 
+            activeOpacity={0.8}
+            onPress={() => handleNodePress(node)}
+            style={[s.card, isUser && { borderColor: '#3DD9AC', borderWidth: 1.5 }]}
+          >
             {/* Rank */}
             <View style={[s.rankBox, { backgroundColor: meta.color + '18' }]}>
               <Text style={[s.rankText, { color: meta.color }]}>#{i + 1}</Text>
@@ -75,7 +149,7 @@ export default function HotspotScreen() {
               <Text style={[s.aqiVal, { color: meta.color }]}>{aqi}</Text>
               <Text style={[s.aqiLabel, { color: meta.color }]}>{meta.label}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         )
       })}
     </ScrollView>
@@ -117,4 +191,10 @@ const s = StyleSheet.create({
   aqiBox:      { alignItems: 'flex-end', justifyContent: 'center', minWidth: 56 },
   aqiVal:      { fontSize: 30, fontWeight: '900' },
   aqiLabel:    { fontSize: 11, fontWeight: '600', marginTop: -2 },
+  
+  // Map Styling
+  mapContainer:{ height: 240, borderRadius: 18, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  map:         { ...StyleSheet.absoluteFillObject },
+  markerCircle:{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#ffffff', elevation: 5 },
+  markerText:  { color: '#ffffff', fontSize: 10, fontWeight: '900' },
 })
