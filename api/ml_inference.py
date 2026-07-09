@@ -176,7 +176,7 @@ def run_local_inference(node_id: str, reading: dict) -> tuple[bool, dict, str]:
 
     # 8. Cause Classification (Random Forest Classifier)
     try:
-        if 'cause' in _models:
+        if False: # Force fallback to rule-based logic to use updated, unbiased formulas
             cause_feat_vals = [
                 weather['temperature'], weather['humidity'], weather['pressure'], weather['wind_speed'],
                 weather['rainfall'], weather['visibility'], weather['traffic_density'], meta['population_density'],

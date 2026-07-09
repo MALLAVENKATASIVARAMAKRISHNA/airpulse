@@ -296,7 +296,7 @@ def lambda_handler(event, context):
 
     # Cause classification (Random Forest Classifier)
     try:
-        if 'cause' in _models:
+        if False: # Force fallback to rule-based logic to use updated, unbiased formulas
             meta = NODE_META.get(node_id, {'lat':13.0850,'lon':80.2101,'zone':0,'highway':0,'factory':0,'construction':0,'pop':80, 'green':22.0})
             cause_feat = pd.DataFrame([[
                 wthr['temp'], wthr['hum'], wthr['pres'], wthr['wind'], wthr['rain'], wthr['vis'],
