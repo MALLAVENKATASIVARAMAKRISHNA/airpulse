@@ -107,19 +107,8 @@ def generate_reading(node):
         
     nh3   = round(random.uniform(1.0, 5.0) * tf, 2)
 
-    sub_aqis = {
-        "PM2.5": calc_sub_aqi(pm25,  PM25_BP),
-        "PM10":  calc_sub_aqi(pm10,  PM10_BP),
-        "CO":    calc_sub_aqi(co,    CO_BP),
-        "NO2":   calc_sub_aqi(no2,   NO2_BP),
-        "Ozone": calc_sub_aqi(ozone, OZONE_BP),
-    }
-    dom = max(sub_aqis, key=sub_aqis.get)
-    aqi = sub_aqis[dom]
-
     return {
         "node_id":            node["node_id"],
-        "aqi":                aqi,
         "pm25":               pm25,
         "pm10":               pm10,
         "co":                 co,
@@ -128,15 +117,7 @@ def generate_reading(node):
         "ozone":              ozone,
         "co2":                co2,
         "voc":                voc,
-        "smoke":              smoke,
-        "sub_aqi_pm25":       sub_aqis["PM2.5"],
-        "sub_aqi_pm10":       sub_aqis["PM10"],
-        "sub_aqi_co":         sub_aqis["CO"],
-        "sub_aqi_nh3":        0,
-        "sub_aqi_no2":        sub_aqis["NO2"],
-        "sub_aqi_ozone":      sub_aqis["Ozone"],
-        "dominant_pollutant": dom,
-        "cause":              CAUSE_MAP[dom],
+        "smoke":              smoke
     }
 
 # ── MQTT client setup ─────────────────────────────────────────
@@ -162,8 +143,7 @@ def simulate_node(client, node):
             reading = generate_reading(node)
             topic   = f"{TOPIC_PREFIX}/{node['node_id']}"
             client.publish(topic, json.dumps(reading), qos=1)
-            print(f"[{node['name']:<22}] AQI: {reading['aqi']:>3}  "
-                  f"Dominant: {reading['dominant_pollutant']:<6}  → {topic}")
+            print(f"[{node['name']:<22}] Published raw sensors (CO2: {reading['co2']}, CO: {reading['co']}, PM2.5: {reading['pm25']}) → {topic}")
         except Exception as e:
             print(f"[{node['name']}] Error: {e}")
         time.sleep(2)
