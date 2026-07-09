@@ -327,11 +327,11 @@ def lambda_handler(event, context):
         meta = NODE_META.get(node_id, {'lat':13.0850,'lon':80.2101,'zone':0,'highway':0,'factory':0,'construction':0,'pop':80, 'green':22.0})
         # Fallback to rule-based scoring (identifying highest category)
         scores = {
-            'Vehicle Emissions':    (35 if wthr['traffic'] > 70 else 0) + (25 if event.get('co', 0) > 2 else 0) + (20 if event.get('no2', 0) > 40 else 0) + (20 if event.get('pm25', 0) > 80 else 0),
+            'Vehicle Emissions':    (35 if wthr['traffic'] > 70 else 0) + (25 if event.get('co', 0) > 2 else 0) + (20 if event.get('no2', 0) > 40 else 0) + (35 if event.get('pm25', 0) > 80 else 0),
             'Industrial Emissions': (35 if meta['factory'] else 0) + (25 if event.get('co2', 0) > 800 else 0) + (20 if event.get('no2', 0) > 45 else 0) + (20 if event.get('ozone', 0) > 80 else 0),
             'Construction Dust':    (40 if meta['construction'] else 0) + (35 if event.get('pm10', 0) > 150 else 0) + (15 if wthr['wind'] > 10 else 0),
-            'Waste Burning':        (40 if event.get('smoke', 0) > 70 else 0) + (20 if event.get('co', 0) > 2 else 0) + (25 if event.get('pm25', 0) > 100 else 0),
-            'Weather Conditions':   (30 if wthr['wind'] < 2 else 0) + (20 if wthr['rain'] == 0 else 0) + (25 if event.get('pm25', 0) > 90 else 0),
+            'Waste Burning':        (40 if event.get('smoke', 0) > 70 else 0) + (20 if event.get('co', 0) > 2 else 0) + (40 if event.get('pm25', 0) > 100 else 0),
+            'Weather Conditions':   (20 if wthr['wind'] < 1.5 else 0) + (10 if wthr['rain'] == 0 else 0) + (15 if event.get('pm25', 0) < 50 else 0),
         }
         predicted_cause = max(scores, key=scores.get)
 

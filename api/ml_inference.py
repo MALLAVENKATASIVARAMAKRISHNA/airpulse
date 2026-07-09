@@ -207,11 +207,11 @@ def run_local_inference(node_id: str, reading: dict) -> tuple[bool, dict, str]:
     except Exception as e:
         # Fallback to rule-based scoring (identifying highest category)
         scores = {
-            'Vehicle Emissions':    (35 if weather['traffic_density'] > 70 else 0) + (25 if reading.get('co', 0) > 2 else 0) + (20 if reading.get('no2', 0) > 40 else 0) + (20 if reading.get('pm25', 0) > 80 else 0),
+            'Vehicle Emissions':    (35 if weather['traffic_density'] > 70 else 0) + (25 if reading.get('co', 0) > 2 else 0) + (20 if reading.get('no2', 0) > 40 else 0) + (35 if reading.get('pm25', 0) > 80 else 0),
             'Industrial Emissions': (35 if meta['near_factory'] else 0) + (25 if reading.get('co2', 0) > 800 else 0) + (20 if reading.get('no2', 0) > 45 else 0) + (20 if reading.get('ozone', 0) > 80 else 0),
             'Construction Dust':    (40 if meta['near_construction'] else 0) + (35 if reading.get('pm10', 0) > 150 else 0) + (15 if weather['wind_speed'] > 10 else 0),
-            'Waste Burning':        (40 if reading.get('smoke', 0) > 70 else 0) + (20 if reading.get('co', 0) > 2 else 0) + (25 if reading.get('pm25', 0) > 100 else 0),
-            'Weather Conditions':   (30 if weather['wind_speed'] < 2 else 0) + (20 if weather['rainfall'] == 0 else 0) + (25 if reading.get('pm25', 0) > 90 else 0),
+            'Waste Burning':        (40 if reading.get('smoke', 0) > 70 else 0) + (20 if reading.get('co', 0) > 2 else 0) + (40 if reading.get('pm25', 0) > 100 else 0),
+            'Weather Conditions':   (20 if weather['wind_speed'] < 1.5 else 0) + (10 if weather['rainfall'] == 0 else 0) + (15 if reading.get('pm25', 0) < 50 else 0),
         }
         predicted_cause = max(scores, key=scores.get)
 
