@@ -46,7 +46,6 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
   const [nodeLoading,  setNodeLoading]  = useState(false)
 
   async function load() {
-    setLoading(true)
     try {
       const [n, a, uc] = await Promise.all([api.latestAll(), api.anomalies(), api.userCount()])
       setRawNodes(n || [])
