@@ -88,8 +88,8 @@ def get_db():
 
 # ── Feature vector ───────────────────────────────────────────
 def build_features(r, node_id):
-    meta = NODE_META[node_id]
-    wthr = NODE_WEATHER[node_id]
+    meta = NODE_META.get(node_id, {'lat':13.0850,'lon':80.2101,'zone':0,'highway':0,'factory':0,'construction':0,'pop':80, 'green':22.0})
+    wthr = NODE_WEATHER.get(node_id, {'temp':32,'hum':72,'pres':1010,'wind':7, 'rain':0.5,'vis':9, 'traffic':50})
     now  = datetime.now(timezone.utc)
     hr   = now.hour
     wd   = now.weekday()
@@ -213,8 +213,16 @@ def lambda_handler(event, context):
     load_models()
 
     node_id = event.get('node_id','')
-    if node_id not in NODE_META:
-        return {'statusCode':400,'body':f'Unknown node: {node_id}'}
+    try:
+        cur = get_db().cursor()
+        cur.execute("SELECT 1 FROM nodes WHERE node_id = %s", (node_id,))
+        exists = cur.fetchone()
+        if not exists and node_id not in NODE_META:
+            return {'statusCode':400,'body':f'Unknown node: {node_id}'}
+    except Exception as e:
+        print(f"DB node check failed: {e}")
+        if node_id not in NODE_META and not node_id.startswith('NODE'):
+            return {'statusCode':400,'body':f'Unknown node: {node_id}'}
 
     # Hybrid Mode: Simulate and merge missing/placeholder physical sensor readings
     import math, random
@@ -269,7 +277,7 @@ def lambda_handler(event, context):
     feat = build_features(event, node_id)
     preds = {h: int(np.clip(_models[h].predict(feat)[0],0,500)) for h in ['6h','24h','48h']}
 
-    wthr = NODE_WEATHER[node_id]
+    wthr = NODE_WEATHER.get(node_id, {'temp':32,'hum':72,'pres':1010,'wind':7, 'rain':0.5,'vis':9, 'traffic':50})
     anom_feat = np.array([[
         event.get('aqi',0),event.get('pm25',0),event.get('pm10',0),
         event.get('co',0),event.get('co2',0),event.get('no2',0),
@@ -281,7 +289,7 @@ def lambda_handler(event, context):
     # Cause classification (Random Forest Classifier)
     try:
         if 'cause' in _models:
-            meta = NODE_META[node_id]
+            meta = NODE_META.get(node_id, {'lat':13.0850,'lon':80.2101,'zone':0,'highway':0,'factory':0,'construction':0,'pop':80, 'green':22.0})
             cause_feat = pd.DataFrame([[
                 wthr['temp'], wthr['hum'], wthr['pres'], wthr['wind'], wthr['rain'], wthr['vis'],
                 wthr['traffic'], meta['pop'], meta['highway'], meta['factory'], meta['construction'], meta['green'],
@@ -308,7 +316,7 @@ def lambda_handler(event, context):
             raise ValueError("Cause classifier model not loaded")
     except Exception as e:
         print(f"Error predicting cause in Lambda: {e}")
-        meta = NODE_META[node_id]
+        meta = NODE_META.get(node_id, {'lat':13.0850,'lon':80.2101,'zone':0,'highway':0,'factory':0,'construction':0,'pop':80, 'green':22.0})
         # Fallback to rule-based scoring (identifying highest category)
         scores = {
             'Vehicle Emissions':    (35 if wthr['traffic'] > 70 else 0) + (25 if event.get('co', 0) > 2 else 0) + (20 if event.get('no2', 0) > 40 else 0) + (20 if event.get('pm25', 0) > 80 else 0),
