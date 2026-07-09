@@ -51,6 +51,24 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
   const markersRef = useRef([])
   const mapContainerRef = useRef(null)
 
+  // Filter nodes & anomalies by authority's state and district jurisdiction
+  const nodes = rawNodes.filter(n => 
+    (!profile.district || n.district?.toLowerCase() === profile.district?.toLowerCase()) &&
+    (!profile.state || n.state?.toLowerCase() === profile.state?.toLowerCase())
+  )
+
+  const anomalies = rawAnomalies.filter(a => 
+    (!profile.district || a.district?.toLowerCase() === profile.district?.toLowerCase()) &&
+    (!profile.state || a.state?.toLowerCase() === profile.state?.toLowerCase())
+  )
+
+  const sorted    = [...nodes].sort((a, b) => (b.aqi || 0) - (a.aqi || 0))
+  const districtAvg = nodes.length ? Math.round(nodes.reduce((s, n) => s + (n.aqi || 0), 0) / nodes.length) : 0
+  const chartData = nodes.map(n => ({ name: n.location?.split(' ')[0], AQI: n.aqi || 0, fill: aqiMeta(n.aqi || 0).color }))
+
+  // CPCB Standard safe limit is AQI <= 100. Any node with AQI > 100 exceeds CPCB guidelines.
+  const cpcbExceededNodes = nodes.filter(n => (n.aqi || 0) > 100)
+
   // Manage Leaflet Map lifecycle for district nodes tab
   useEffect(() => {
     // Only initialize map if we are on the nodes list tab and there are nodes to display
@@ -175,24 +193,6 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
     const id = setInterval(load, 2000)
     return () => clearInterval(id)
   }, [])
-
-  // Filter nodes & anomalies by authority's state and district jurisdiction
-  const nodes = rawNodes.filter(n => 
-    (!profile.district || n.district?.toLowerCase() === profile.district?.toLowerCase()) &&
-    (!profile.state || n.state?.toLowerCase() === profile.state?.toLowerCase())
-  )
-
-  const anomalies = rawAnomalies.filter(a => 
-    (!profile.district || a.district?.toLowerCase() === profile.district?.toLowerCase()) &&
-    (!profile.state || a.state?.toLowerCase() === profile.state?.toLowerCase())
-  )
-
-  const sorted    = [...nodes].sort((a, b) => (b.aqi || 0) - (a.aqi || 0))
-  const districtAvg = nodes.length ? Math.round(nodes.reduce((s, n) => s + (n.aqi || 0), 0) / nodes.length) : 0
-  const chartData = nodes.map(n => ({ name: n.location?.split(' ')[0], AQI: n.aqi || 0, fill: aqiMeta(n.aqi || 0).color }))
-
-  // CPCB Standard safe limit is AQI <= 100. Any node with AQI > 100 exceeds CPCB guidelines.
-  const cpcbExceededNodes = nodes.filter(n => (n.aqi || 0) > 100)
 
   return (
     <AppShell role="authority" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab} theme={theme} toggleTheme={toggleTheme}>
