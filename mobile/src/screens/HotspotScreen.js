@@ -60,99 +60,106 @@ export default function HotspotScreen() {
   const mapNodes = allNodes.filter(n => n.latitude && n.longitude)
 
   return (
-    <ScrollView
-      style={s.container}
-      contentContainerStyle={s.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3DD9AC" colors={['#3DD9AC']} />}
-    >
-      <Text style={s.pageTitle}>Pollution Hotspots</Text>
-      <Text style={s.pageSub}>All monitoring stations ranked by AQI</Text>
+    <View style={s.container}>
+      <View style={s.headerSection}>
+        <Text style={s.pageTitle}>Pollution Hotspots</Text>
+        <Text style={s.pageSub}>All monitoring stations ranked by AQI</Text>
+      </View>
 
-      {/* Map Header */}
+      {/* Map Header (Fixed at the top, outside ScrollView) */}
       {mapNodes.length > 0 && (
-        <View style={s.mapContainer}>
-          <MapView
-            ref={mapRef}
-            style={s.map}
-            initialRegion={{
-              latitude: 13.0827,
-              longitude: 80.2707,
-              latitudeDelta: 0.18,
-              longitudeDelta: 0.18,
-            }}
-            customMapStyle={darkMapStyle}
-            showsUserLocation={false}
-            showsMyLocationButton={false}
-            showsCompass={false}
-          >
-            {mapNodes.map(node => {
-              const meta = getAqiMeta(node.aqi ?? 0)
-              return (
-                <Marker
-                  key={node.node_id}
-                  coordinate={{
-                    latitude: parseFloat(node.latitude) || 13.0827,
-                    longitude: parseFloat(node.longitude) || 80.2707
-                  }}
-                  title={node.location}
-                  description={`AQI: ${node.aqi ?? 0} (${meta.label})`}
-                >
-                  <View style={[s.markerCircle, { backgroundColor: meta.color }]}>
-                    <Text style={s.markerText}>{node.aqi ?? 0}</Text>
-                  </View>
-                </Marker>
-              )
-            })}
-          </MapView>
+        <View style={s.mapWrapper}>
+          <View style={s.mapContainer}>
+            <MapView
+              ref={mapRef}
+              style={s.map}
+              initialRegion={{
+                latitude: 13.0827,
+                longitude: 80.2707,
+                latitudeDelta: 0.18,
+                longitudeDelta: 0.18,
+              }}
+              customMapStyle={darkMapStyle}
+              showsUserLocation={false}
+              showsMyLocationButton={false}
+              showsCompass={false}
+            >
+              {mapNodes.map(node => {
+                const meta = getAqiMeta(node.aqi ?? 0)
+                return (
+                  <Marker
+                    key={node.node_id}
+                    coordinate={{
+                      latitude: parseFloat(node.latitude) || 13.0827,
+                      longitude: parseFloat(node.longitude) || 80.2707
+                    }}
+                    title={node.location}
+                    description={`AQI: ${node.aqi ?? 0} (${meta.label})`}
+                    tracksViewChanges={false}
+                  >
+                    <View style={[s.markerCircle, { backgroundColor: meta.color }]}>
+                      <Text style={s.markerText}>{node.aqi ?? 0}</Text>
+                    </View>
+                  </Marker>
+                )
+              })}
+            </MapView>
+          </View>
         </View>
       )}
 
-      {/* Ranked List */}
-      {sorted.map((node, i) => {
-        const aqi     = node.aqi ?? 0
-        const meta    = getAqiMeta(aqi)
-        const isUser  = node.node_id === user.node_id
-        const cluster = clusterForNode(node.node_id)
+      {/* Scrollable list of cards below the map */}
+      <ScrollView
+        style={s.scrollContainer}
+        contentContainerStyle={s.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3DD9AC" colors={['#3DD9AC']} />}
+      >
+        {sorted.map((node, i) => {
+          const aqi     = node.aqi ?? 0
+          const meta    = getAqiMeta(aqi)
+          const isUser  = node.node_id === user.node_id
+          const cluster = clusterForNode(node.node_id)
 
-        return (
-          <TouchableOpacity 
-            key={node.node_id} 
-            activeOpacity={0.8}
-            onPress={() => handleNodePress(node)}
-            style={[s.card, isUser && { borderColor: '#3DD9AC', borderWidth: 1.5 }]}
-          >
-            {/* Rank */}
-            <View style={[s.rankBox, { backgroundColor: meta.color + '18' }]}>
-              <Text style={[s.rankText, { color: meta.color }]}>#{i + 1}</Text>
-            </View>
+          return (
+            <TouchableOpacity 
+              key={node.node_id} 
+              activeOpacity={0.8}
+              onPress={() => handleNodePress(node)}
+              style={[s.card, isUser && { borderColor: '#3DD9AC', borderWidth: 1.5 }]}
+            >
+              {/* Rank */}
+              <View style={[s.rankBox, { backgroundColor: meta.color + '18' }]}>
+                <Text style={[s.rankText, { color: meta.color }]}>#{i + 1}</Text>
+              </View>
 
-            {/* Info */}
-            <View style={s.info}>
-              <View style={s.nameRow}>
-                <Text style={s.location} numberOfLines={1}>{node.location}</Text>
-                {isUser && <View style={s.youBadge}><Text style={s.youText}>You</Text></View>}
-                {cluster && <View style={s.clusterBadge}><Text style={s.clusterText}>{cluster.label}</Text></View>}
+              {/* Info */}
+              <View style={s.info}>
+                <View style={s.nameRow}>
+                  <Text style={s.location} numberOfLines={1}>{node.location}</Text>
+                  {isUser && <View style={s.youBadge}><Text style={s.youText}>You</Text></View>}
+                  {cluster && <View style={s.clusterBadge}><Text style={s.clusterText}>{cluster.label}</Text></View>}
+                </View>
+                <Text style={s.district}>{node.district}</Text>
+                <View style={s.barTrack}>
+                  <View style={[s.barFill, { width: `${Math.min((aqi / 500) * 100, 100)}%`, backgroundColor: meta.color }]} />
+                </View>
+                <View style={s.pollRow}>
+                  <PollMini label="PM2.5" value={node.pm25?.toFixed(0)} color={meta.color} />
+                  <PollMini label="PM10"  value={node.pm10?.toFixed(0)} color={meta.color} />
+                  <PollMini label="NO2"   value={node.no2?.toFixed(0)}  color={meta.color} />
+                </View>
               </View>
-              <Text style={s.district}>{node.district}</Text>
-              <View style={s.barTrack}>
-                <View style={[s.barFill, { width: `${Math.min((aqi / 500) * 100, 100)}%`, backgroundColor: meta.color }]} />
-              </View>
-              <View style={s.pollRow}>
-                <PollMini label="PM2.5" value={node.pm25?.toFixed(0)} color={meta.color} />
-                <PollMini label="PM10"  value={node.pm10?.toFixed(0)} color={meta.color} />
-                <PollMini label="NO2"   value={node.no2?.toFixed(0)}  color={meta.color} />
-              </View>
-            </View>
 
-            {/* AQI */}
-            <View style={s.aqiBox}>
-              <Text style={[s.aqiVal, { color: meta.color }]}>{aqi}</Text>
-              <Text style={[s.aqiLabel, { color: meta.color }]}>{meta.label}</Text>
-            </View>
-          </TouchableOpacity>
-        )
-      })}
-    </ScrollView>
+              {/* AQI */}
+              <View style={s.aqiBox}>
+                <Text style={[s.aqiVal, { color: meta.color }]}>{aqi}</Text>
+                <Text style={[s.aqiLabel, { color: meta.color }]}>{meta.label}</Text>
+              </View>
+            </TouchableOpacity>
+          )
+        })}
+      </ScrollView>
+    </View>
   )
 }
 
@@ -167,10 +174,13 @@ function PollMini({ label, value, color }) {
 
 const s = StyleSheet.create({
   container:   { flex: 1, backgroundColor: '#0a0a0a' },
-  content:     { padding: 16, paddingBottom: 40 },
+  headerSection:{ paddingHorizontal: 16, paddingTop: 16 },
+  mapWrapper:  { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 },
+  scrollContainer: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
   center:      { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0a' },
-  pageTitle:   { fontSize: 22, fontWeight: '800', color: '#ffffff', marginBottom: 4, marginTop: 4 },
-  pageSub:     { fontSize: 13, color: 'rgba(255,255,255,0.40)', marginBottom: 18 },
+  pageTitle:   { fontSize: 22, fontWeight: '800', color: '#ffffff', marginBottom: 4 },
+  pageSub:     { fontSize: 13, color: 'rgba(255,255,255,0.40)' },
   card:        { backgroundColor: '#161616', borderRadius: 18, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   rankBox:     { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   rankText:    { fontSize: 13, fontWeight: '800' },
@@ -193,7 +203,7 @@ const s = StyleSheet.create({
   aqiLabel:    { fontSize: 11, fontWeight: '600', marginTop: -2 },
   
   // Map Styling
-  mapContainer:{ height: 240, borderRadius: 18, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  mapContainer:{ height: 240, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   map:         { ...StyleSheet.absoluteFillObject },
   markerCircle:{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#ffffff', elevation: 5 },
   markerText:  { color: '#ffffff', fontSize: 10, fontWeight: '900' },
