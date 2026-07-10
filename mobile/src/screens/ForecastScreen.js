@@ -51,8 +51,10 @@ export default function ForecastScreen() {
 
   const currentAqi = reading?.aqi ?? 0
 
+  const hasMl = mlPredictions && mlPredictions['6h'] !== undefined && mlPredictions['6h'] !== null
+
   useEffect(() => {
-    if (!mlPredictions && user?.node_id) {
+    if (!hasMl && user?.node_id) {
       api.predictions(user.node_id)
         .then(rows => {
           if (!rows?.length) return
@@ -63,9 +65,9 @@ export default function ForecastScreen() {
           })
         }).catch(() => {})
     }
-  }, [user?.node_id, mlPredictions])
+  }, [user?.node_id, hasMl])
 
-  const preds = mlPredictions ?? dbPredictions
+  const preds = hasMl ? mlPredictions : dbPredictions
   const p6  = preds?.['6h']  ?? currentAqi
   const p24 = preds?.['24h'] ?? currentAqi
   const p48 = preds?.['48h'] ?? currentAqi

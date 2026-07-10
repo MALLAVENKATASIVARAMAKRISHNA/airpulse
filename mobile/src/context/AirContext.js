@@ -8,7 +8,7 @@ export function AirProvider({ user, children }) {
   const [reading,     setReading]     = useState(null)
   const [allNodes,    setAllNodes]    = useState([])
   const [health,      setHealth]      = useState(null)
-  const [predictions, setPredictions] = useState({})
+  const [predictions, setPredictions] = useState(null)
   const [isAnomaly,   setIsAnomaly]   = useState(false)
   const [loading,     setLoading]     = useState(true)
   const [live,        setLive]        = useState(false)
@@ -16,15 +16,32 @@ export function AirProvider({ user, children }) {
 
   const load = useCallback(async () => {
     try {
-      const tasks = [api.latestAll()]
-      if (!healthLoaded.current) tasks.push(api.getHealth().catch(() => null))
+      const tasks = [
+        api.latestAll(),
+        api.predictions(user.node_id).catch(() => [])
+      ]
+      if (!healthLoaded.current) {
+        tasks.push(api.getHealth().catch(() => null))
+      }
       const results  = await Promise.all(tasks)
       const nodes    = results[0] || []
+      const predRows = results[1] || []
+      
       const userNode = nodes.find(n => n.node_id === user.node_id) || nodes[0] || null
       setAllNodes(nodes)
       setReading(userNode)
-      if (!healthLoaded.current && results[1] !== undefined) {
-        setHealth(results[1])
+      
+      if (predRows.length) {
+        setPredictions({
+          '6h':  predRows.find(r => r.horizon === '6h')?.predicted_aqi  ?? null,
+          '24h': predRows.find(r => r.horizon === '24h')?.predicted_aqi ?? null,
+          '48h': predRows.find(r => r.horizon === '48h')?.predicted_aqi ?? null,
+        })
+      }
+
+      const healthIndex = 2
+      if (!healthLoaded.current && results[healthIndex] !== undefined) {
+        setHealth(results[healthIndex])
         healthLoaded.current = true
       }
     } catch {}
