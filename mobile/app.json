@@ -17,7 +17,12 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.ramakrishna2003.airpulsemonitor",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCqjBAmeZOe3ddBijuoQixpah0ycSHeB8g"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
