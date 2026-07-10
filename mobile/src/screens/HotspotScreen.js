@@ -91,8 +91,8 @@ export default function HotspotScreen() {
                 <Marker
                   key={node.node_id}
                   coordinate={{
-                    latitude: parseFloat(node.latitude),
-                    longitude: parseFloat(node.longitude)
+                    latitude: parseFloat(node.latitude) || 13.0827,
+                    longitude: parseFloat(node.longitude) || 80.2707
                   }}
                   title={node.location}
                   description={`AQI: ${node.aqi ?? 0} (${meta.label})`}
