@@ -231,7 +231,10 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
   useEffect(() => {
     load()
     const id = setInterval(load, 2000)
-    return () => clearInterval(i  return (
+    return () => clearInterval(id)
+  }, [])
+
+  return (
     <>
       <AppShell role="authority" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab} theme={theme} toggleTheme={toggleTheme}>
         <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
