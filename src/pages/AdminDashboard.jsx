@@ -39,6 +39,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
   const SIM_INTERVAL = 5
   const [simLog,    setSimLog]    = useState([])
   const [overrides, setOverrides] = useState({})
+  const [simMode,   setSimMode]   = useState('now')
   const [loading,   setLoading]   = useState(true)
   const [search,    setSearch]    = useState('')
   const [live,      setLive]      = useState(false)
@@ -80,6 +81,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
       setNodes(n||[])
       setUserCount(uc?.count||0)
       setSimStatus(s)
+      if (s?.mode) setSimMode(s.mode)
       setAnomalies(a||[])
     } catch {}
     setLoading(false)
@@ -219,7 +221,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
 
   useEffect(() => { if (tab==='users') loadUsers() }, [tab, loadUsers])
 
-  async function startSim()  { try { await api.simStart(SIM_INTERVAL); await load(); setSimLog(l=>[`▶ Simulation started (${SIM_INTERVAL}s interval)`,...l.slice(0,49)]) } catch(e){setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)])} }
+  async function startSim()  { try { await api.simStart(SIM_INTERVAL, simMode); await load(); setSimLog(l=>[`▶ Simulation started (${SIM_INTERVAL}s interval, mode: ${simMode})`,...l.slice(0,49)]) } catch(e){setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)])} }
   async function stopSim()   { try { await api.simStop();              await load(); setSimLog(l=>['⏹ Simulation stopped',...l.slice(0,49)]) } catch(e){setSimLog(l=>[`✗ ${e.message}`,...l.slice(0,49)])} }
 
   async function insertReading(node_id, location) {
@@ -882,21 +884,36 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
         <h1 className="text-2xl font-black text-white flex items-center gap-2"><Activity size={22} className="text-brandCyan"/> Simulation Control</h1>
 
         {/* Controls */}
-        <div className="glass-card p-6 flex items-center gap-4 flex-wrap">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold border
-            ${simStatus?.running?'text-brandGreen border-brandGreen/30 bg-brandGreen/10':'text-white/40 border-white/10'}`}>
-            <span className={`w-2 h-2 rounded-full ${simStatus?.running?'bg-brandGreen animate-pulse':'bg-white/20'}`}/>
-            {simStatus?.running?'Running':'Stopped'}
+        <div className="glass-card p-6 flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-4">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold border
+              ${simStatus?.running?'text-brandGreen border-brandGreen/30 bg-brandGreen/10':'text-white/40 border-white/10'}`}>
+              <span className={`w-2 h-2 rounded-full ${simStatus?.running?'bg-brandGreen animate-pulse':'bg-white/20'}`}/>
+              {simStatus?.running?'Running':'Stopped'}
+            </div>
+            <button onClick={startSim} disabled={simStatus?.running}
+              className="flex items-center gap-2 px-4 py-2 bg-brandGreen/20 border border-brandGreen/30 text-brandGreen rounded-btn text-sm font-semibold hover:bg-brandGreen/30 transition-all disabled:opacity-40">
+              <Play size={14}/> Start
+            </button>
+            <button onClick={stopSim} disabled={!simStatus?.running}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-btn text-sm font-semibold hover:bg-red-500/30 transition-all disabled:opacity-40">
+              <Pause size={14}/> Stop
+            </button>
           </div>
-          <button onClick={startSim} disabled={simStatus?.running}
-            className="flex items-center gap-2 px-4 py-2 bg-brandGreen/20 border border-brandGreen/30 text-brandGreen rounded-btn text-sm font-semibold hover:bg-brandGreen/30 transition-all disabled:opacity-40">
-            <Play size={14}/> Start
-          </button>
-          <button onClick={stopSim} disabled={!simStatus?.running}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-btn text-sm font-semibold hover:bg-red-500/30 transition-all disabled:opacity-40">
-            <Pause size={14}/> Stop
-          </button>
+
+          <div className="flex items-center gap-4 border-l border-white/10 pl-6">
+            <span className="text-xs text-white/50 font-bold uppercase tracking-wider">Source Mode:</span>
+            <label className="flex items-center gap-2 text-sm text-white/80 cursor-pointer select-none">
+              <input type="radio" name="simMode" value="now" checked={simMode === 'now'} onChange={() => setSimMode('now')} disabled={simStatus?.running} className="accent-brandCyan cursor-pointer" />
+              Now (Random Data)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-white/80 cursor-pointer select-none">
+              <input type="radio" name="simMode" value="dataset" checked={simMode === 'dataset'} onChange={() => setSimMode('dataset')} disabled={simStatus?.running} className="accent-brandCyan cursor-pointer" />
+              From Dataset
+            </label>
+          </div>
         </div>
+
 
         {/* Manual Reading Insert */}
         <div className="space-y-3">

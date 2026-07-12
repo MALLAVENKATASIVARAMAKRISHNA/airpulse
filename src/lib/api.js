@@ -85,7 +85,7 @@ export const api = {
 
   // Simulation (admin)
   simStatus:   ()             => req('GET',  '/api/simulation/status'),
-  simStart:    (secs)         => req('POST', '/api/simulation/start',    { interval_seconds: secs }),
+  simStart:    (secs, mode)   => req('POST', '/api/simulation/start',    { interval_seconds: secs, mode }),
   simStop:     ()             => req('POST', '/api/simulation/stop'),
   simOverride: (node_id, val) => req('POST', '/api/simulation/override', { node_id, ...val }),
   simReset:    (node_id)      => req('POST', '/api/simulation/reset',    { node_id }),

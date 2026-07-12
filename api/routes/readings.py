@@ -36,7 +36,7 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
     
     # Hybrid Mode: If the reading comes from a physical sensor node
     # and has missing/placeholder variables, we simulate them.
-    from routes.simulation import NODE_BASES, get_time_factor, sub_aqi, PM25_BP, PM10_BP, NO2_BP, CO_BP, OZONE_BP
+    from routes.simulation import NODE_BASES, get_time_factor, sub_aqi, PM25_BP, PM10_BP, NO2_BP, CO_BP, OZONE_BP, sim, load_dataset_if_needed
     import random
     
     # Fallback base profile for custom/newly added nodes
@@ -46,24 +46,23 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
     def vary(val, pct=0.15):
         return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
         
-    if reading_dict.get('pm25', 0) == 0:
-        reading_dict['pm25'] = vary(base['pm25'])
-    if reading_dict.get('pm10', 0) == 0:
-        reading_dict['pm10'] = vary(base['pm10'])
-    if reading_dict.get('ozone', 0) == 0:
-        reading_dict['ozone'] = vary(base['ozone'])
-    if reading_dict.get('no2', 0) == 0:
-        reading_dict['no2'] = vary(base['no2'])
-    if reading_dict.get('co2', 0) == 0:
-        reading_dict['co2'] = vary(base['co2'])
-    if reading_dict.get('co', 0) == 0:
-        reading_dict['co'] = vary(base['co'])
-    if reading_dict.get('nh3', 0) == 0:
-        reading_dict['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
-    if reading_dict.get('voc', 0) == 0:
-        reading_dict['voc'] = vary(base['voc'])
-    if reading_dict.get('smoke', 0) == 0:
-        reading_dict['smoke'] = vary(base['smoke'])
+    dataset = load_dataset_if_needed(node_id)
+    row = None
+    if dataset:
+        cursor = sim.cursors.get(node_id, 0)
+        row = dataset[cursor % len(dataset)]
+        sim.cursors[node_id] = (cursor + 1) % len(dataset)
+        
+    for field in ['pm25', 'pm10', 'co', 'nh3', 'no2', 'ozone', 'co2', 'voc', 'smoke']:
+        if reading_dict.get(field, 0) == 0:
+            if row and field in row:
+                reading_dict[field] = row[field]
+            else:
+                if field == 'nh3':
+                    reading_dict['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
+                else:
+                    reading_dict[field] = vary(base.get(field, 0.0))
+
         
     NH3_BP = [(0,200,0,50),(200,400,51,100),(400,800,101,200),(800,1200,201,300),(1200,1800,301,400),(1800,2000,401,500)]
 

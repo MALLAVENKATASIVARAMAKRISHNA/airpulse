@@ -30,6 +30,8 @@ def get_iot_client():
 
 router = APIRouter()
 
+import csv
+
 # ── Simulation state ─────────────────────────────────────────
 class SimState:
     def __init__(self):
@@ -38,8 +40,40 @@ class SimState:
         self.interval  = 30
         self.overrides = {}
         self.log       = []
+        self.mode      = 'now'  # 'now' or 'dataset'
+        self.cursors   = {}     # node_id -> current row index (int)
+        self.datasets  = {}     # node_id -> list of dicts (loaded from CSV)
 
 sim = SimState()
+
+def load_dataset_if_needed(node_id: str):
+    if node_id not in sim.datasets:
+        csv_path = f'/home/ubuntu/airpulse/api/data/{node_id}.csv'
+        if not os.path.exists(csv_path):
+            return None
+        rows = []
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    mapped = {}
+                    for k, v in row.items():
+                        if not k:
+                            continue
+                        key = k.strip().lower().replace('.', '').replace(' ', '').replace('_', '')
+                        if key == 'nodeid':
+                            key = 'node_id'
+                        try:
+                            mapped[key] = float(v)
+                        except ValueError:
+                            mapped[key] = v
+                    rows.append(mapped)
+            sim.datasets[node_id] = rows
+        except Exception as e:
+            print(f"Error reading dataset CSV for {node_id}: {e}")
+            return None
+    return sim.datasets[node_id]
+
 
 NODE_BASES = {
     'NODE001': {'name': 'Manali Industrial', 'pm25': 90,  'pm10': 120, 'co': 6.5, 'no2': 65, 'ozone': 55, 'co2': 520, 'voc': 18, 'smoke': 12},
@@ -93,35 +127,62 @@ def get_time_factor(node_id):
     return factor
 
 def generate_and_insert(node_id, base):
-    tf = get_time_factor(node_id)
-    
-    def vary(val, pct=0.15):
-        return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
-
     override = sim.overrides.get(node_id, {})
 
-    if node_id == "NODE001":
-        # Industrial node features
-        pm25  = override.get('pm25',  vary(base['pm25'], 0.10))
-        pm10  = override.get('pm10',  vary(base['pm10'] * 1.25, 0.10))
-        co    = override.get('co',    vary(base['co'], 0.15))
-        no2   = override.get('no2',   vary(base['no2'] * 1.15, 0.10))
-        ozone = override.get('ozone', vary(base['ozone'], 0.15))
-        co2   = override.get('co2',   vary(base['co2'] * 1.30, 0.05))
-        voc   = override.get('voc',   vary(base['voc'] * 1.40, 0.15))
-        smoke = override.get('smoke', vary(base['smoke'] * 1.50, 0.15))
+    if sim.mode == 'dataset':
+        dataset = load_dataset_if_needed(node_id)
+        if dataset:
+            cursor = sim.cursors.get(node_id, 0)
+            row = dataset[cursor % len(dataset)]
+            sim.cursors[node_id] = (cursor + 1) % len(dataset)
+            
+            pm25  = override.get('pm25',  row.get('pm25', 0.0))
+            pm10  = override.get('pm10',  row.get('pm10', 0.0))
+            co    = override.get('co',    row.get('co', 0.0))
+            nh3   = override.get('nh3',   row.get('nh3', 0.0))
+            no2   = override.get('no2',   row.get('no2', 0.0))
+            ozone = override.get('ozone', row.get('ozone', 0.0))
+            co2   = override.get('co2',   row.get('co2', 0.0))
+            voc   = override.get('voc',   row.get('voc', 0.0))
+            smoke = override.get('smoke', row.get('smoke', 0.0))
+        else:
+            tf = get_time_factor(node_id)
+            def vary(val, pct=0.15):
+                return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
+            pm25  = override.get('pm25',  vary(base['pm25']))
+            pm10  = override.get('pm10',  vary(base['pm10']))
+            co    = override.get('co',    vary(base['co'],    0.20))
+            no2   = override.get('no2',   vary(base['no2']))
+            ozone = override.get('ozone', vary(base['ozone']))
+            co2   = override.get('co2',   vary(base['co2'],   0.05))
+            voc   = override.get('voc',   vary(base['voc'],   0.20))
+            smoke = override.get('smoke', vary(base['smoke'], 0.20))
+            nh3   = round(random.uniform(1.0, 5.0) * tf, 2)
     else:
-        # Standard node scaling
-        pm25  = override.get('pm25',  vary(base['pm25']))
-        pm10  = override.get('pm10',  vary(base['pm10']))
-        co    = override.get('co',    vary(base['co'],    0.20))
-        no2   = override.get('no2',   vary(base['no2']))
-        ozone = override.get('ozone', vary(base['ozone']))
-        co2   = override.get('co2',   vary(base['co2'],   0.05))
-        voc   = override.get('voc',   vary(base['voc'],   0.20))
-        smoke = override.get('smoke', vary(base['smoke'], 0.20))
+        tf = get_time_factor(node_id)
+        def vary(val, pct=0.15):
+            return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
 
-    nh3   = round(random.uniform(1.0, 5.0) * tf, 2)
+        if node_id == "NODE001":
+            pm25  = override.get('pm25',  vary(base['pm25'], 0.10))
+            pm10  = override.get('pm10',  vary(base['pm10'] * 1.25, 0.10))
+            co    = override.get('co',    vary(base['co'], 0.15))
+            no2   = override.get('no2',   vary(base['no2'] * 1.15, 0.10))
+            ozone = override.get('ozone', vary(base['ozone'], 0.15))
+            co2   = override.get('co2',   vary(base['co2'] * 1.30, 0.05))
+            voc   = override.get('voc',   vary(base['voc'] * 1.40, 0.15))
+            smoke = override.get('smoke', vary(base['smoke'] * 1.50, 0.15))
+        else:
+            pm25  = override.get('pm25',  vary(base['pm25']))
+            pm10  = override.get('pm10',  vary(base['pm10']))
+            co    = override.get('co',    vary(base['co'],    0.20))
+            no2   = override.get('no2',   vary(base['no2']))
+            ozone = override.get('ozone', vary(base['ozone']))
+            co2   = override.get('co2',   vary(base['co2'],   0.05))
+            voc   = override.get('voc',   vary(base['voc'],   0.20))
+            smoke = override.get('smoke', vary(base['smoke'], 0.20))
+        nh3   = round(random.uniform(1.0, 5.0) * tf, 2)
+
 
     subs = {
         'PM2.5': sub_aqi(pm25,  PM25_BP),
@@ -229,6 +290,7 @@ def simulation_loop():
 # ── Routes ───────────────────────────────────────────────────
 class StartRequest(BaseModel):
     interval_seconds: int = 2
+    mode: str = 'now'
 
 class OverrideRequest(BaseModel):
     node_id: str
@@ -244,21 +306,31 @@ class ResetRequest(BaseModel):
 @router.get('/status')
 def get_status(current_user=Depends(admin_only)):
     return {
-        'running':  sim.running,
-        'interval': sim.interval,
+        'running':   sim.running,
+        'interval':  sim.interval,
         'overrides': sim.overrides,
-        'log': sim.log,
+        'log':       sim.log,
+        'mode':      sim.mode,
     }
 
 @router.post('/start')
 def start_sim(data: StartRequest, current_user=Depends(admin_only)):
     if sim.running:
         return {'ok': True, 'message': 'Already running'}
+    
+    sim.mode = getattr(data, 'mode', 'now')
+    
+    # Reset cursors when starting simulation from dataset
+    if sim.mode == 'dataset':
+        sim.cursors = {nid: 0 for nid in NODE_BASES.keys()}
+        sim.cursors['NODE006'] = 0  # reset for physical node 6 too
+        
     sim.running  = True
     sim.interval = 2
     sim.thread   = threading.Thread(target=simulation_loop, daemon=True)
     sim.thread.start()
-    return {'ok': True, 'message': f'Simulation started — interval {sim.interval}s'}
+    return {'ok': True, 'message': f'Simulation started — interval {sim.interval}s, mode {sim.mode}'}
+
 
 @router.post('/stop')
 def stop_sim(current_user=Depends(admin_only)):
