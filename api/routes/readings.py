@@ -56,6 +56,8 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
         reading_dict['no2'] = vary(base['no2'])
     if reading_dict.get('co2', 0) == 0:
         reading_dict['co2'] = vary(base['co2'])
+    if reading_dict.get('co', 0) == 0:
+        reading_dict['co'] = vary(base['co'])
     if reading_dict.get('nh3', 0) == 0:
         reading_dict['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
     if reading_dict.get('voc', 0) == 0:

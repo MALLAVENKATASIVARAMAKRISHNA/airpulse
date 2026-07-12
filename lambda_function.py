@@ -260,6 +260,8 @@ def lambda_handler(event, context):
         event['no2'] = vary(base['no2'])
     if event.get('co2', 0) == 0:
         event['co2'] = vary(base['co2'])
+    if event.get('co', 0) == 0:
+        event['co'] = vary(base['co'])
     if event.get('nh3', 0) == 0:
         event['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
     if event.get('voc', 0) == 0:
