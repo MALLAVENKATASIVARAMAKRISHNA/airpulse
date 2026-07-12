@@ -69,11 +69,30 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
 
   useEffect(() => {
     if (!nodes || !nodes.length) return
+
+    // Clean up nodes that dropped below 200 from lastAlertedTimes
+    nodes.forEach(n => {
+      const aqi = n.aqi ?? 0
+      if (aqi < 200) {
+        delete lastAlertedTimes.current[n.node_id]
+      }
+    })
+
     const dangerousNode = nodes.find(n => {
       const aqi = n.aqi ?? 0
+      if (aqi < 200) return false
+
       const recordedAt = n.recorded_at
       const lastTime = lastAlertedTimes.current[n.node_id]
-      return aqi >= 200 && recordedAt !== lastTime
+
+      if (!lastTime) {
+        // First breach for this node: alert immediately
+        return true
+      } else {
+        // Persistently above threshold: check if 3 hours have passed since last alert for this node
+        const elapsed = new Date(recordedAt) - new Date(lastTime)
+        return elapsed >= 3 * 3600 * 1000
+      }
     })
 
     if (dangerousNode) {

@@ -188,7 +188,7 @@ def notify(node_id, aqi, location):
             return
 
         cur.execute("""
-            SELECT u.push_token, hc.condition_name, uh.severity_level, uh.age
+            SELECT u.user_id, u.push_token, hc.condition_name, uh.severity_level, uh.age
             FROM users u
             JOIN user_health uh ON uh.user_id=u.user_id
             JOIN health_conditions hc ON hc.condition_id=uh.condition_id
@@ -197,6 +197,59 @@ def notify(node_id, aqi, location):
         for u in (cur.fetchall() or []):
             thr = get_threshold(u['condition_name'], u['severity_level'], u['age'])
             cond = (u['condition_name'] or '').lower()
+            
+            # Check if there is an active threshold violation before doing history checks
+            current_aqi = reading.get('aqi', 0)
+            has_violation = False
+            if current_aqi >= thr:
+                has_violation = True
+            elif 'asthma' in cond and (reading.get('sub_aqi_pm25', 0) >= thr or reading.get('sub_aqi_no2', 0) >= thr):
+                has_violation = True
+            elif 'copd' in cond and (reading.get('sub_aqi_pm10', 0) >= thr or reading.get('sub_aqi_no2', 0) >= thr):
+                has_violation = True
+            elif 'heart' in cond and (reading.get('sub_aqi_co', 0) >= thr or reading.get('sub_aqi_pm25', 0) >= thr):
+                has_violation = True
+            elif 'diabetes' in cond and reading.get('sub_aqi_pm25', 0) >= thr:
+                has_violation = True
+            elif ('children' in cond or 'elderly' in cond) and (reading.get('sub_aqi_pm25', 0) >= thr or reading.get('sub_aqi_pm10', 0) >= thr or reading.get('sub_aqi_ozone', 0) >= thr):
+                has_violation = True
+
+            if not has_violation:
+                continue
+
+            # Query database for the last alert sent to this user
+            cur.execute("""
+                SELECT al.alerted_at
+                FROM user_alert_log al
+                JOIN aqi_readings r ON r.reading_id = al.reading_id
+                WHERE al.user_id = %s
+                ORDER BY al.alerted_at DESC LIMIT 1
+            """, (u['user_id'],))
+            last_alert = cur.fetchone()
+
+            if last_alert:
+                last_alerted_at = last_alert['alerted_at']
+                # Check if the node's AQI went below threshold since the last alert
+                cur.execute("""
+                    SELECT 1 FROM aqi_readings
+                    WHERE node_id = %s
+                      AND aqi < %s
+                      AND recorded_at > %s
+                    LIMIT 1
+                """, (node_id, thr, last_alerted_at))
+                went_safe = cur.fetchone()
+
+                if not went_safe:
+                    # Has been continuously above threshold. Check if 3 hours have elapsed.
+                    from datetime import datetime, timezone
+                    now = datetime.now(timezone.utc)
+                    if last_alerted_at.tzinfo is None:
+                        last_alerted_at = last_alerted_at.replace(tzinfo=timezone.utc)
+                    
+                    elapsed = (now - last_alerted_at).total_seconds()
+                    if elapsed < 3 * 3600:
+                        # Suppress notification
+                        continue
             
             # Check triggers (both overall AQI and pollutant-specific)
             triggers = []

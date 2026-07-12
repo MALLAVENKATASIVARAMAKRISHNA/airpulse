@@ -118,9 +118,27 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
     if (!reading) return
     const aqi = reading.aqi ?? 0
     const recordedAt = reading.recorded_at
-    if (aqi >= 200 && recordedAt !== lastAlertedTime.current) {
-      lastAlertedTime.current = recordedAt
-      setAlertVisible(true)
+    const threshold = 200
+
+    if (aqi < threshold) {
+      // Dropped below threshold: reset the trigger time so next rise alerts instantly
+      lastAlertedTime.current = null
+      return
+    }
+
+    if (aqi >= threshold) {
+      if (!lastAlertedTime.current) {
+        // First breach: alert immediately
+        lastAlertedTime.current = recordedAt
+        setAlertVisible(true)
+      } else {
+        // Persistently above threshold: check if 3 hours have passed
+        const elapsed = new Date(recordedAt) - new Date(lastAlertedTime.current)
+        if (elapsed >= 3 * 3600 * 1000) {
+          lastAlertedTime.current = recordedAt
+          setAlertVisible(true)
+        }
+      }
     }
   }, [reading])
 

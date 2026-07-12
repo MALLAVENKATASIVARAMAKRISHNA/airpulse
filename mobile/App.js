@@ -44,16 +44,33 @@ Notifications.setNotificationHandler({
 function AlertWatcher() {
   const { reading, health } = useAir()
   const [alertVisible, setAlertVisible] = useState(false)
-  const lastAlertedReadingId = useRef(null)
+  const lastAlertedTime = useRef(null)
 
   useEffect(() => {
     if (!reading || !health) return
     const threshold = getAlertThreshold(health.condition_name, health.severity_level, health.age)
     const aqi       = reading.aqi ?? 0
-    const readingId = reading.reading_id
-    if (aqi >= threshold && readingId !== lastAlertedReadingId.current) {
-      lastAlertedReadingId.current = readingId
-      setAlertVisible(true)
+    const recordedAt = reading.recorded_at
+
+    if (aqi < threshold) {
+      // Dropped below threshold: reset the trigger time so next rise alerts instantly
+      lastAlertedTime.current = null
+      return
+    }
+
+    if (aqi >= threshold) {
+      if (!lastAlertedTime.current) {
+        // First breach: alert immediately
+        lastAlertedTime.current = recordedAt
+        setAlertVisible(true)
+      } else {
+        // Persistently above threshold: check if 3 hours have passed
+        const elapsed = new Date(recordedAt) - new Date(lastAlertedTime.current)
+        if (elapsed >= 3 * 3600 * 1000) {
+          lastAlertedTime.current = recordedAt
+          setAlertVisible(true)
+        }
+      }
     }
   }, [reading, health])
 
