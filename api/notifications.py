@@ -107,8 +107,12 @@ def check_and_notify(node_id: str, aqi: int, location: str):
                 )
                 cond = (u['condition_name'] or '').lower()
                 
-                # Check pollutant-specific triggers
+                # Check triggers (both overall AQI and pollutant-specific)
                 triggers = []
+                
+                # Always check general overall AQI for all users
+                if reading.get('aqi', 0) >= threshold:
+                    triggers.append(('AQI', reading.get('aqi', 0), f"Overall Air Quality Index (AQI) has reached {reading.get('aqi', 0)}, exceeding your personal safe limit of {threshold}."))
                 
                 # Asthma: PM2.5, NO2
                 if 'asthma' in cond:
@@ -144,11 +148,6 @@ def check_and_notify(node_id: str, aqi: int, location: str):
                         triggers.append(('PM10', reading.get('sub_aqi_pm10', 0), f"PM10 levels are high ({float(reading.get('pm10', 0)):.1f} µg/m³), which is unsafe for vulnerable age groups. Stay indoors."))
                     if reading.get('sub_aqi_ozone', 0) >= threshold:
                         triggers.append(('Ozone', reading.get('sub_aqi_ozone', 0), f"Ozone levels are high ({float(reading.get('ozone', 0)):.1f} µg/m³), which is unsafe for vulnerable age groups. Stay indoors."))
-                
-                # Normal / Healthy: Overall AQI
-                else:
-                    if reading.get('aqi', 0) >= threshold:
-                        triggers.append(('AQI', reading.get('aqi', 0), f"Air Quality Index (AQI) has reached {reading.get('aqi', 0)}, exceeding your personal safe limit of {threshold}. Avoid strenuous outdoor activity."))
 
                 if triggers:
                     # Pick the trigger with the highest sub-AQI severity
