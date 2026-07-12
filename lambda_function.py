@@ -250,6 +250,7 @@ def notify(node_id, aqi, location):
                     'title': f'⚠️ Air Quality Alert — {location}',
                     'body': alert_message,
                     'sound':'default','priority':'high','channelId':'aqi-alerts',
+                    'categoryId': 'aqi-alert-cat',
                     'data':{'node_id':node_id,'aqi':reading.get('aqi', 0),'threshold':thr,'location':location},
                 }, timeout=5)
     except Exception as e:

@@ -67,6 +67,7 @@ def _send(token: str, title: str, body: str, data: dict):
             'priority': 'high',
             'data':     data,
             'channelId':'aqi-alerts',
+            'categoryId': 'aqi-alert-cat',
         }, timeout=10)
     except Exception as e:
         print(f'Push send error: {e}')

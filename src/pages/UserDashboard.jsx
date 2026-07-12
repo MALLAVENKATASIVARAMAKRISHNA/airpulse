@@ -10,6 +10,7 @@ import RecommendationsPage from './RecommendationsPage'
 import SourceAnalysisPage from './SourceAnalysisPage'
 import AlertCenterPage from './AlertCenterPage'
 import SettingsPage from './SettingsPage'
+import DangerAlert from '../components/DangerAlert'
 import { api } from '../lib/api'
 
 function aqiMeta(aqi) {
@@ -109,6 +110,19 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
   const [live,     setLive]     = useState(false)
   const clientRef = useRef(null)
   const locationRef = useRef({})
+
+  const [alertVisible, setAlertVisible] = useState(false)
+  const lastAlertedTime = useRef(null)
+
+  useEffect(() => {
+    if (!reading) return
+    const aqi = reading.aqi ?? 0
+    const recordedAt = reading.recorded_at
+    if (aqi >= 200 && recordedAt !== lastAlertedTime.current) {
+      lastAlertedTime.current = recordedAt
+      setAlertVisible(true)
+    }
+  }, [reading])
 
   const loadHistory = useCallback(async () => {
     try {
@@ -413,9 +427,19 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
   }
 
   return (
-    <AppShell role="user" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab} theme={theme} toggleTheme={toggleTheme}>
-      {renderContent()}
-    </AppShell>
+    <>
+      <AppShell role="user" onSignOut={onSignOut} activeTab={tab} onTabChange={setTab} theme={theme} toggleTheme={toggleTheme}>
+        {renderContent()}
+      </AppShell>
+      {alertVisible && (
+        <DangerAlert
+          reading={reading}
+          node={reading}
+          health={health}
+          onDismiss={() => setAlertVisible(false)}
+        />
+      )}
+    </>
   )
 }
 

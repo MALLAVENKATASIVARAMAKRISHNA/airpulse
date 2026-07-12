@@ -111,4 +111,29 @@ def insert_reading(data: ReadingRequest, current_user=Depends(admin_only)):
 
     node = query("SELECT location FROM nodes WHERE node_id = %s", (data.node_id,), fetch='one')
     check_and_notify(data.node_id, data.aqi, node['location'] if node else data.node_id)
+
+    # Publish to IoT Core in real-time
+    try:
+        from routes.simulation import get_iot_client
+        import json
+        publish_row = dict(row)
+        if 'recorded_at' in publish_row and publish_row['recorded_at'] is not None:
+            if hasattr(publish_row['recorded_at'], 'strftime'):
+                publish_row['recorded_at'] = publish_row['recorded_at'].strftime('%Y-%m-%dT%H:%M:%SZ')
+            else:
+                publish_row['recorded_at'] = str(publish_row['recorded_at'])
+                
+        get_iot_client().publish(
+            topic=f'airpulse/clean_readings/{node_id}',
+            qos=1,
+            payload=json.dumps(publish_row),
+        )
+        get_iot_client().publish(
+            topic=f'airpulse/ml/{node_id}',
+            qos=1,
+            payload=json.dumps({'node_id': node_id, 'predictions': preds, 'is_anomaly': is_anomaly}),
+        )
+    except Exception as e:
+        print(f"Error publishing manual insert to IoT Core: {e}")
+
     return dict(row)

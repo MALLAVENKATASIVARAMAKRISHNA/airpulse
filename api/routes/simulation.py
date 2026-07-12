@@ -260,6 +260,11 @@ def generate_and_insert(node_id, base):
             payload=json.dumps(raw_payload),
         )
         get_iot_client().publish(
+            topic=f'airpulse/clean_readings/{node_id}',
+            qos=1,
+            payload=json.dumps(payload),
+        )
+        get_iot_client().publish(
             topic=f'airpulse/ml/{node_id}',
             qos=1,
             payload=json.dumps({'node_id': node_id, 'predictions': preds, 'is_anomaly': is_anomaly}),

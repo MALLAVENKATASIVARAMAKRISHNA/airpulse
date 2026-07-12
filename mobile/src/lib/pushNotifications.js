@@ -30,6 +30,15 @@ export async function registerPushToken() {
     })
   }
 
+  // Register interactive notification category with a Dismiss Alert action
+  await Notifications.setNotificationCategoryAsync('aqi-alert-cat', [
+    {
+      identifier: 'dismiss-action',
+      buttonTitle: 'Dismiss Alert',
+      options: { opensAppToForeground: false },
+    },
+  ])
+
   const { status: existing } = await Notifications.getPermissionsAsync()
   let finalStatus = existing
   if (existing !== 'granted') {

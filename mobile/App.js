@@ -15,11 +15,30 @@ import { api } from './src/lib/api'
 
 // Must be called before any notification can be received
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data
+    // Suppress default UI and trigger a local ongoing notification instead
+    if (data?.aqi) {
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: notification.request.content.title,
+          body: notification.request.content.body,
+          data: data,
+          categoryIdentifier: 'aqi-alert-cat',
+          android: {
+            ongoing: true, // Prevent swipe-to-dismiss and Clear All
+            channelId: 'aqi-alerts',
+          },
+        },
+        trigger: null, // show immediately
+      }).catch(err => console.log('Error triggering ongoing local notification:', err))
+    }
+    return {
+      shouldShowAlert: false, // Suppress standard notification
+      shouldPlaySound: true,
+      shouldSetBadge:  false,
+    }
+  },
 })
 
 function AlertWatcher() {
@@ -77,12 +96,20 @@ export default function App() {
     // Cold launch: app was closed, user tapped the notification
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (!response) return
+      if (response.actionIdentifier === 'dismiss-action') {
+        Notifications.dismissNotificationAsync(response.notification.request.identifier)
+        return
+      }
       const data = response.notification.request.content.data
       if (data?.aqi) setNotifAlert({ aqi: data.aqi, location: data.location })
     })
 
     // Background tap: app was suspended, user taps the notification
     const sub = Notifications.addNotificationResponseReceivedListener(response => {
+      if (response.actionIdentifier === 'dismiss-action') {
+        Notifications.dismissNotificationAsync(response.notification.request.identifier)
+        return
+      }
       const data = response.notification.request.content.data
       if (data?.aqi) setNotifAlert({ aqi: data.aqi, location: data.location })
     })
