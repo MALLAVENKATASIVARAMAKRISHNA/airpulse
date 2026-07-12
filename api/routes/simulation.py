@@ -177,12 +177,26 @@ def generate_and_insert(node_id, base):
     # Update predictions table
     update_predictions_table(node_id, preds)
 
-    # Publish to IoT Core — user dashboard WebSocket gets real-time update
+    # Publish to IoT Core — send ONLY raw data so the backend handles calculations
+    raw_payload = {
+        'node_id':           node_id,
+        'pm25':              pm25,
+        'pm10':              pm10,
+        'co':                co,
+        'nh3':               nh3,
+        'no2':               no2,
+        'ozone':             ozone,
+        'co2':               co2,
+        'voc':               voc,
+        'smoke':             smoke,
+        'recorded_at':       payload['recorded_at'],
+    }
+
     try:
         get_iot_client().publish(
             topic=f'airpulse/readings/{node_id}',
             qos=1,
-            payload=json.dumps(payload),
+            payload=json.dumps(raw_payload),
         )
         get_iot_client().publish(
             topic=f'airpulse/ml/{node_id}',
