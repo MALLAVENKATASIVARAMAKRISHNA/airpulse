@@ -81,6 +81,14 @@ def check_and_notify(node_id: str, aqi: int, location: str):
     """
     def _run():
         try:
+            reading = query("""
+                SELECT * FROM aqi_readings
+                WHERE node_id = %s
+                ORDER BY reading_id DESC LIMIT 1
+            """, (node_id,), fetch='one')
+            if not reading:
+                return
+
             users = query("""
                 SELECT u.user_id, u.push_token,
                        hc.condition_name, uh.severity_level, uh.age
@@ -97,23 +105,72 @@ def check_and_notify(node_id: str, aqi: int, location: str):
                     u['severity_level'],
                     u['age'] or 30,
                 )
-                if aqi >= threshold:
-                    # Log for all users (web + mobile) so Alert Center shows history
+                cond = (u['condition_name'] or '').lower()
+                
+                # Check pollutant-specific triggers
+                triggers = []
+                
+                # Asthma: PM2.5, NO2
+                if 'asthma' in cond:
+                    if reading.get('sub_aqi_pm25', 0) >= threshold:
+                        triggers.append(('PM2.5', reading.get('sub_aqi_pm25', 0), f"PM2.5 levels are high ({float(reading.get('pm25', 0)):.1f} µg/m³), which can trigger an asthma attack. Stay indoors."))
+                    if reading.get('sub_aqi_no2', 0) >= threshold:
+                        triggers.append(('NO2', reading.get('sub_aqi_no2', 0), f"NO2 levels are high ({float(reading.get('no2', 0)):.1f} µg/m³), which can trigger bronchial spasms. Stay indoors."))
+                
+                # COPD: PM10, NO2
+                elif 'copd' in cond:
+                    if reading.get('sub_aqi_pm10', 0) >= threshold:
+                        triggers.append(('PM10', reading.get('sub_aqi_pm10', 0), f"PM10 levels are high ({float(reading.get('pm10', 0)):.1f} µg/m³), which poses a risk of COPD flare-up. Stay indoors."))
+                    if reading.get('sub_aqi_no2', 0) >= threshold:
+                        triggers.append(('NO2', reading.get('sub_aqi_no2', 0), f"NO2 levels are high ({float(reading.get('no2', 0)):.1f} µg/m³), which causes severe airway irritation in COPD. Stay indoors."))
+                
+                # Heart Disease: CO, PM2.5
+                elif 'heart' in cond:
+                    if reading.get('sub_aqi_co', 0) >= threshold:
+                        triggers.append(('CO', reading.get('sub_aqi_co', 0), f"Carbon Monoxide (CO) levels are high ({float(reading.get('co', 0)):.1f} mg/m³), which reduces oxygen transport to the heart. Stay indoors."))
+                    if reading.get('sub_aqi_pm25', 0) >= threshold:
+                        triggers.append(('PM2.5', reading.get('sub_aqi_pm25', 0), f"PM2.5 levels are high ({float(reading.get('pm25', 0)):.1f} µg/m³), which increases cardiovascular strain. Stay indoors."))
+                
+                # Diabetes: PM2.5
+                elif 'diabetes' in cond:
+                    if reading.get('sub_aqi_pm25', 0) >= threshold:
+                        triggers.append(('PM2.5', reading.get('sub_aqi_pm25', 0), f"PM2.5 levels are high ({float(reading.get('pm25', 0)):.1f} µg/m³). Fine particles can increase systemic inflammation and spike insulin resistance. Wear a mask."))
+                
+                # Children / Elderly: PM2.5, PM10, Ozone
+                elif 'children' in cond or 'elderly' in cond:
+                    if reading.get('sub_aqi_pm25', 0) >= threshold:
+                        triggers.append(('PM2.5', reading.get('sub_aqi_pm25', 0), f"PM2.5 levels are high ({float(reading.get('pm25', 0)):.1f} µg/m³), which is unsafe for vulnerable age groups. Stay indoors."))
+                    if reading.get('sub_aqi_pm10', 0) >= threshold:
+                        triggers.append(('PM10', reading.get('sub_aqi_pm10', 0), f"PM10 levels are high ({float(reading.get('pm10', 0)):.1f} µg/m³), which is unsafe for vulnerable age groups. Stay indoors."))
+                    if reading.get('sub_aqi_ozone', 0) >= threshold:
+                        triggers.append(('Ozone', reading.get('sub_aqi_ozone', 0), f"Ozone levels are high ({float(reading.get('ozone', 0)):.1f} µg/m³), which is unsafe for vulnerable age groups. Stay indoors."))
+                
+                # Normal / Healthy: Overall AQI
+                else:
+                    if reading.get('aqi', 0) >= threshold:
+                        triggers.append(('AQI', reading.get('aqi', 0), f"Air Quality Index (AQI) has reached {reading.get('aqi', 0)}, exceeding your personal safe limit of {threshold}. Avoid strenuous outdoor activity."))
+
+                if triggers:
+                    # Pick the trigger with the highest sub-AQI severity
+                    triggers.sort(key=lambda t: t[1], reverse=True)
+                    target_pollutant, highest_sub_aqi, alert_message = triggers[0]
+                    
+                    # Log to database
                     try:
                         query("""
                             INSERT INTO user_alert_log (user_id, reading_id, alerted_at)
-                            SELECT %s, reading_id, NOW() FROM aqi_readings
-                            WHERE node_id = %s ORDER BY reading_id DESC LIMIT 1
-                        """, (u['user_id'], node_id), fetch='none')
+                            VALUES (%s, %s, NOW())
+                        """, (u['user_id'], reading['reading_id']), fetch='none')
                     except Exception:
                         pass
-                    # Push notification only for mobile users with a token
+                    
+                    # Send push notification
                     if u['push_token']:
                         _send(
                             token=u['push_token'],
                             title=f'⚠️ Air Quality Alert — {location}',
-                            body=f'AQI is {aqi}, which exceeds your personal safe limit of {threshold}. Stay indoors.',
-                            data={'node_id': node_id, 'aqi': aqi, 'threshold': threshold, 'location': location},
+                            body=alert_message,
+                            data={'node_id': node_id, 'aqi': reading.get('aqi', 0), 'threshold': threshold, 'location': location},
                         )
         except Exception as e:
             print(f'Notification check error: {e}')

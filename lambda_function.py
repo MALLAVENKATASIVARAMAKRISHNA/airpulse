@@ -182,6 +182,11 @@ def get_threshold(cond, sev, age):
 def notify(node_id, aqi, location):
     try:
         cur = get_db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM aqi_readings WHERE node_id = %s ORDER BY reading_id DESC LIMIT 1", (node_id,))
+        reading = cur.fetchone()
+        if not reading:
+            return
+
         cur.execute("""
             SELECT u.push_token, hc.condition_name, uh.severity_level, uh.age
             FROM users u
@@ -191,13 +196,62 @@ def notify(node_id, aqi, location):
         """, (node_id,))
         for u in (cur.fetchall() or []):
             thr = get_threshold(u['condition_name'], u['severity_level'], u['age'])
-            if aqi >= thr:
+            cond = (u['condition_name'] or '').lower()
+            
+            # Check pollutant-specific triggers
+            triggers = []
+            
+            # Asthma: PM2.5, NO2
+            if 'asthma' in cond:
+                if reading.get('sub_aqi_pm25', 0) >= thr:
+                    triggers.append(('PM2.5', reading.get('sub_aqi_pm25', 0), f"PM2.5 levels are high ({float(reading.get('pm25', 0)):.1f} µg/m³), which can trigger an asthma attack. Stay indoors."))
+                if reading.get('sub_aqi_no2', 0) >= thr:
+                    triggers.append(('NO2', reading.get('sub_aqi_no2', 0), f"NO2 levels are high ({float(reading.get('no2', 0)):.1f} µg/m³), which can trigger bronchial spasms. Stay indoors."))
+            
+            # COPD: PM10, NO2
+            elif 'copd' in cond:
+                if reading.get('sub_aqi_pm10', 0) >= thr:
+                    triggers.append(('PM10', reading.get('sub_aqi_pm10', 0), f"PM10 levels are high ({float(reading.get('pm10', 0)):.1f} µg/m³), which poses a risk of COPD flare-up. Stay indoors."))
+                if reading.get('sub_aqi_no2', 0) >= thr:
+                    triggers.append(('NO2', reading.get('sub_aqi_no2', 0), f"NO2 levels are high ({float(reading.get('no2', 0)):.1f} µg/m³), which causes severe airway irritation in COPD. Stay indoors."))
+            
+            # Heart Disease: CO, PM2.5
+            elif 'heart' in cond:
+                if reading.get('sub_aqi_co', 0) >= thr:
+                    triggers.append(('CO', reading.get('sub_aqi_co', 0), f"Carbon Monoxide (CO) levels are high ({float(reading.get('co', 0)):.1f} mg/m³), which reduces oxygen transport to the heart. Stay indoors."))
+                if reading.get('sub_aqi_pm25', 0) >= thr:
+                    triggers.append(('PM2.5', reading.get('sub_aqi_pm25', 0), f"PM2.5 levels are high ({float(reading.get('pm25', 0)):.1f} µg/m³), which increases cardiovascular strain. Stay indoors."))
+            
+            # Diabetes: PM2.5
+            elif 'diabetes' in cond:
+                if reading.get('sub_aqi_pm25', 0) >= thr:
+                    triggers.append(('PM2.5', reading.get('sub_aqi_pm25', 0), f"PM2.5 levels are high ({float(reading.get('pm25', 0)):.1f} µg/m³). Fine particles can increase systemic inflammation and spike insulin resistance. Wear a mask."))
+            
+            # Children / Elderly: PM2.5, PM10, Ozone
+            elif 'children' in cond or 'elderly' in cond:
+                if reading.get('sub_aqi_pm25', 0) >= thr:
+                    triggers.append(('PM2.5', reading.get('sub_aqi_pm25', 0), f"PM2.5 levels are high ({float(reading.get('pm25', 0)):.1f} µg/m³), which is unsafe for vulnerable age groups. Stay indoors."))
+                if reading.get('sub_aqi_pm10', 0) >= thr:
+                    triggers.append(('PM10', reading.get('sub_aqi_pm10', 0), f"PM10 levels are high ({float(reading.get('pm10', 0)):.1f} µg/m³), which is unsafe for vulnerable age groups. Stay indoors."))
+                if reading.get('sub_aqi_ozone', 0) >= thr:
+                    triggers.append(('Ozone', reading.get('sub_aqi_ozone', 0), f"Ozone levels are high ({float(reading.get('ozone', 0)):.1f} µg/m³), which is unsafe for vulnerable age groups. Stay indoors."))
+            
+            # Normal / Healthy: Overall AQI
+            else:
+                if reading.get('aqi', 0) >= thr:
+                    triggers.append(('AQI', reading.get('aqi', 0), f"Air Quality Index (AQI) has reached {reading.get('aqi', 0)}, exceeding your personal safe limit of {thr}. Avoid strenuous outdoor activity."))
+
+            if triggers:
+                # Pick the trigger with the highest sub-AQI severity
+                triggers.sort(key=lambda t: t[1], reverse=True)
+                target_pollutant, highest_sub_aqi, alert_message = triggers[0]
+                
                 httpx.post('https://exp.host/--/api/v2/push/send', json={
                     'to': u['push_token'],
                     'title': f'⚠️ Air Quality Alert — {location}',
-                    'body': f'AQI is {aqi}, exceeding your safe limit of {thr}. Stay indoors.',
+                    'body': alert_message,
                     'sound':'default','priority':'high','channelId':'aqi-alerts',
-                    'data':{'node_id':node_id,'aqi':aqi,'threshold':thr,'location':location},
+                    'data':{'node_id':node_id,'aqi':reading.get('aqi', 0),'threshold':thr,'location':location},
                 }, timeout=5)
     except Exception as e:
         print(f'Notify error: {e}')
