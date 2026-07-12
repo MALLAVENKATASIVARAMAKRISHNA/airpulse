@@ -578,6 +578,7 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
           reading={alertingNode}
           node={alertingNode}
           health={null}
+          role="authority"
           onDismiss={() => {
             setAlertVisible(false)
             setAlertingNode(null)

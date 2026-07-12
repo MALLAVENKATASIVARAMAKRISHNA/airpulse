@@ -27,6 +27,14 @@ export function getHealthMessage(aqi, condition, severity) {
     : 'Avoid prolonged outdoor activity. Close windows and use a well-fitted mask if you must go outside.'
 }
 
+export function getAuthorityDirectives(aqi) {
+  if (aqi <= 100) return 'Enforce standard air quality monitoring. Maintain routine emission compliance checks.'
+  if (aqi <= 200) return 'Enforce dust control measures at active construction sites. Step up mechanized road sweeping.'
+  if (aqi <= 300) return 'Enforce Graded Response (GRAP): Deploy water mist sprinklers on major roads and enforce a strict ban on open garbage burning.'
+  if (aqi <= 400) return 'Critical Alert: Restrict polluting industrial activities, ban non-essential diesel generators, and increase public transit frequency.'
+  return 'Emergency: Halt all civil construction, restrict heavy vehicle/truck entry, and prepare to enforce odd-even traffic regulations.'
+}
+
 export function formatReadingTime(value) {
   if (!value) return 'No reading'
   return new Intl.DateTimeFormat('en-IN', {
