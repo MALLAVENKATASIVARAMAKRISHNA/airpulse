@@ -39,7 +39,7 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
   const [tab,       setTab]       = useState('overview')
   const [rawNodes,  setRawNodes]  = useState([])
   const [rawAnomalies, setRawAnomalies] = useState([])
-  const [userCount, setUserCount] = useState(0)
+  const [userCount, setUserCount] = useState({ count: 0, district_count: 0, node_count: 0 })
   const [loading,   setLoading]   = useState(true)
 
   const [selectedNode, setSelectedNode] = useState(null)
@@ -169,7 +169,7 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
       const [n, a, uc] = await Promise.all([api.latestAll(), api.anomalies(), api.userCount()])
       setRawNodes(n || [])
       setRawAnomalies(a || [])
-      setUserCount(uc?.count || 0)
+      setUserCount(uc || { count: 0, district_count: 0, node_count: 0 })
     } catch {}
     setLoading(false)
   }
@@ -220,7 +220,7 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
                   {[
                     { label: 'District Avg AQI', value: districtAvg,        meta: aqiMeta(districtAvg), sub: aqiMeta(districtAvg).label },
                     { label: 'Active Nodes',    value: nodes.length,   color: '#00a2ff',       sub: 'assigned nodes' },
-                    { label: 'Registered Users',value: userCount,      color: '#10d343',       sub: 'citizens' },
+                    { label: 'Registered Users',value: userCount.district_count, color: '#10d343',       sub: `${userCount.node_count} on your node` },
                     { label: 'Anomalies Today', value: anomalies.length, color: anomalies.length > 0 ? '#FF7E00' : '#00E400', sub: 'detected' },
                   ].map(({ label, value, meta, color, sub }) => (
                     <div key={label} className="glass-card p-5 text-center">

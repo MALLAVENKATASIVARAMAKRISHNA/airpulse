@@ -20,8 +20,36 @@ def get_users(current_user=Depends(admin_only)):
 
 @router.get('/count')
 def get_user_count(current_user=Depends(get_current_user)):
+    role = current_user.get('role')
+    if role == 'authority':
+        district = current_user.get('district')
+        node_id = current_user.get('node_id')
+        
+        dist_count = 0
+        if district:
+            res_dist = query(
+                "SELECT COUNT(*) as count FROM users WHERE role = 'user' AND LOWER(district) = LOWER(%s)",
+                (district,), fetch='one'
+            )
+            dist_count = res_dist['count'] if res_dist else 0
+            
+        node_count = 0
+        if node_id:
+            res_node = query(
+                "SELECT COUNT(*) as count FROM users WHERE role = 'user' AND node_id = %s",
+                (node_id,), fetch='one'
+            )
+            node_count = res_node['count'] if res_node else 0
+            
+        return {
+            'count': dist_count,
+            'district_count': dist_count,
+            'node_count': node_count,
+            'is_authority': True
+        }
+        
     result = query("SELECT COUNT(*) as count FROM users WHERE role = 'user'", fetch='one')
-    return {'count': result['count']}
+    return {'count': result['count'], 'is_authority': False}
 
 @router.patch('/{user_id}/role')
 def update_user_role(user_id: int, role: str = Body(..., embed=True), current_user=Depends(admin_only)):
