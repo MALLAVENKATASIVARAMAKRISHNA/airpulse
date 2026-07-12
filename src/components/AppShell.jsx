@@ -29,13 +29,30 @@ const AUTHORITY_NAV = [
 ]
 
 export default function AppShell({ role, onSignOut, activeTab, onTabChange, theme, toggleTheme, children }) {
-  const nav = role === 'admin' ? ADMIN_NAV : role === 'authority' ? AUTHORITY_NAV : USER_NAV
+  const [demoMode, setDemoMode] = useState(() => {
+    return localStorage.getItem('airpulse_demo_mode') === 'true';
+  });
+
+  const baseNav = role === 'admin' ? ADMIN_NAV : role === 'authority' ? AUTHORITY_NAV : USER_NAV;
+  const nav = role === 'admin' && !demoMode
+    ? baseNav.filter(item => item.id !== 'simulation')
+    : baseNav;
+
   const [isOpen, setIsOpen] = useState(false)
 
   const handleNavClick = (id) => {
     onTabChange?.(id)
     setIsOpen(false)
   }
+
+  const toggleDemoMode = () => {
+    const nextVal = !demoMode;
+    setDemoMode(nextVal);
+    localStorage.setItem('airpulse_demo_mode', String(nextVal));
+    if (!nextVal && activeTab === 'simulation') {
+      onTabChange?.('overview');
+    }
+  };
 
   return (
     <div className="flex h-screen bg-darkBg text-white overflow-hidden relative">
@@ -78,7 +95,7 @@ export default function AppShell({ role, onSignOut, activeTab, onTabChange, them
             <span className="w-2 h-2 rounded-full bg-brandGreen animate-pulse" />
             <span className="text-xs text-white/40 font-medium">System live</span>
           </div>
-          <div className="px-3 py-1.5">
+          <div className="flex items-center justify-between px-3 py-1">
             <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border
               ${role === 'admin' ? 'text-orange-400 border-orange-400/30 bg-orange-400/10'
               : role === 'authority' ? 'text-purple-400 border-purple-400/30 bg-purple-400/10'
@@ -86,6 +103,20 @@ export default function AppShell({ role, onSignOut, activeTab, onTabChange, them
               {role === 'admin' ? 'Admin' : role === 'authority' ? 'Authority' : 'Resident'}
             </span>
           </div>
+          {role === 'admin' && (
+            <button
+              onClick={toggleDemoMode}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-btn text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Play size={17} className={demoMode ? 'text-brandCyan' : ''} />
+                <span>Demo Mode</span>
+              </div>
+              <div className={`w-8 h-4 rounded-full p-0.5 transition-all duration-300 ${demoMode ? 'bg-brandCyan' : 'bg-white/20'}`}>
+                <div className={`w-3 h-3 rounded-full bg-[#050a05] transition-all duration-300 ${demoMode ? 'translate-x-4' : 'translate-x-0'}`} />
+              </div>
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-btn text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all"
