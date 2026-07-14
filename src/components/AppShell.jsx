@@ -18,7 +18,7 @@ const ADMIN_NAV = [
   { id: 'overview',   icon: BarChart2, label: 'Overview'   },
   { id: 'nodes',      icon: Globe,     label: 'Nodes'      },
   { id: 'users',      icon: Users,     label: 'Users'      },
-  { id: 'simulation', icon: Play,      label: 'Simulation' },
+  { id: 'simulation', icon: Play,      label: 'Data Control Center' },
   { id: 'anomalies',  icon: Zap,       label: 'Anomalies'  },
 ]
 

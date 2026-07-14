@@ -283,7 +283,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
             { label:'Active Nodes',    value:nodes.length, color:'#00a2ff' },
             { label:'Registered Users',value:userCount,    color:'#10d343' },
             { label:'Anomalies',       value:anomalies.length, color:anomalies.length>0?'#FF7E00':'#00E400' },
-            { label:'Simulation',      value:simStatus?.running?'Running':'Stopped', color:simStatus?.running?'#00E400':'#FF7E00', text:true },
+            { label:'Data Control Center', value:simStatus?.running?'Running':'Stopped', color:simStatus?.running?'#00E400':'#FF7E00', text:true },
           ].map(({label,value,color,text})=>(
             <div key={label} className="glass-card p-5 text-center">
               <p className="text-xs text-white/40 uppercase tracking-wide mb-2">{label}</p>
@@ -881,7 +881,7 @@ export default function AdminDashboard({ profile, onSignOut, theme, toggleTheme 
 
     if (tab === 'simulation') return (
       <div className="p-8 max-w-4xl mx-auto space-y-6">
-        <h1 className="text-2xl font-black text-white flex items-center gap-2"><Activity size={22} className="text-brandCyan"/> Simulation Control</h1>
+        <h1 className="text-2xl font-black text-white flex items-center gap-2"><Activity size={22} className="text-brandCyan"/> Data Control Center</h1>
 
         {/* Controls */}
         <div className="glass-card p-6 flex items-center gap-6 flex-wrap">
