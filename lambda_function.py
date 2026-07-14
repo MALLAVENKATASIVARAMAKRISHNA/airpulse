@@ -10,7 +10,7 @@ S3     = boto3.client('s3', region_name='ap-south-1')
 IOT    = boto3.client('iot-data', region_name='ap-south-1')
 BUCKET = os.environ['S3_BUCKET']
 
-NODE_ENC = {'NODE001':0,'NODE002':1,'NODE003':2,'NODE004':3,'NODE005':4}
+NODE_ENC = {'NODE001':0,'NODE002':1,'NODE003':2,'NODE004':3,'NODE005':4,'NODE006':5}
 
 NODE_META = {
     'NODE001':{'lat':13.1627,'lon':80.2619,'zone':2,'highway':1,'factory':1,'construction':0,'pop':60, 'green':5.0},
@@ -18,6 +18,7 @@ NODE_META = {
     'NODE003':{'lat':13.0418,'lon':80.2341,'zone':1,'highway':1,'factory':0,'construction':1,'pop':90, 'green':8.0},
     'NODE004':{'lat':13.0569,'lon':80.2521,'zone':1,'highway':1,'factory':0,'construction':0,'pop':85, 'green':10.0},
     'NODE005':{'lat':13.0604,'lon':80.2496,'zone':0,'highway':0,'factory':0,'construction':0,'pop':40, 'green':45.0},
+    'NODE006':{'lat':13.0900,'lon':80.2900,'zone':2,'highway':1,'factory':0,'construction':0,'pop':70, 'green':15.0},
 }
 
 NODE_WEATHER = {
@@ -26,11 +27,13 @@ NODE_WEATHER = {
     'NODE003':{'temp':33,'hum':71,'pres':1010,'wind':6, 'rain':0.5,'vis':8, 'traffic':85},
     'NODE004':{'temp':34,'hum':68,'pres':1009,'wind':9, 'rain':0.5,'vis':8, 'traffic':90},
     'NODE005':{'temp':31,'hum':75,'pres':1011,'wind':10,'rain':0.5,'vis':10,'traffic':30},
+    'NODE006':{'temp':32,'hum':73,'pres':1010,'wind':8, 'rain':0.5,'vis':9, 'traffic':60},
 }
 
 LOCATIONS = {
     'NODE001':'Manali Industrial Area','NODE002':'Anna Nagar',
     'NODE003':'T Nagar','NODE004':'Mount Road','NODE005':'Semmozhi Poonga',
+    'NODE006':'Chennai Port Area',
 }
 
 CAUSE_MAP = {
@@ -316,6 +319,7 @@ LAMBDA_NODE_BASES = {
     'NODE003': {'pm25': 68,  'pm10': 95,  'co': 4.2, 'no2': 52, 'ozone': 45, 'co2': 470, 'voc': 12, 'smoke': 8 },
     'NODE004': {'pm25': 105, 'pm10': 145, 'co': 8.0, 'no2': 78, 'ozone': 62, 'co2': 550, 'voc': 22, 'smoke': 16},
     'NODE005': {'pm25': 28,  'pm10': 42,  'co': 1.2, 'no2': 18, 'ozone': 28, 'co2': 400, 'voc': 4,  'smoke': 2 },
+    'NODE006': {'pm25': 55,  'pm10': 80,  'co': 2.5, 'no2': 35, 'ozone': 30, 'co2': 450, 'voc': 10, 'smoke': 6 },
 }
 
 # ── Handler ──────────────────────────────────────────────────
@@ -357,24 +361,27 @@ def lambda_handler(event, context):
     def vary(val, pct=0.15):
         return max(0, round((val + random.uniform(-val * pct, val * pct)) * tf, 2))
         
-    if event.get('pm25', 0) == 0:
-        event['pm25'] = vary(base['pm25'])
-    if event.get('pm10', 0) == 0:
-        event['pm10'] = vary(base['pm10'])
-    if event.get('ozone', 0) == 0:
-        event['ozone'] = vary(base['ozone'])
-    if event.get('no2', 0) == 0:
-        event['no2'] = vary(base['no2'])
-    if event.get('co2', 0) == 0:
-        event['co2'] = vary(base['co2'])
-    if event.get('co', 0) == 0:
-        event['co'] = vary(base['co'])
-    if event.get('nh3', 0) == 0:
-        event['nh3'] = round(random.uniform(1.0, 5.0) * tf, 2)
-    if event.get('voc', 0) == 0:
-        event['voc'] = vary(base['voc'])
-    if event.get('smoke', 0) == 0:
-        event['smoke'] = vary(base['smoke'])
+    def get_or_simulate(key, base_val, is_nh3=False):
+        try:
+            val = float(event.get(key, 0))
+        except (TypeError, ValueError):
+            val = 0.0
+        if val <= 0.0:
+            if is_nh3:
+                return round(random.uniform(1.0, 5.0) * tf, 2)
+            else:
+                return vary(base_val)
+        return val
+
+    event['pm25']  = get_or_simulate('pm25', base['pm25'])
+    event['pm10']  = get_or_simulate('pm10', base['pm10'])
+    event['ozone'] = get_or_simulate('ozone', base['ozone'])
+    event['no2']   = get_or_simulate('no2', base['no2'])
+    event['co2']   = get_or_simulate('co2', base['co2'])
+    event['co']    = get_or_simulate('co', base['co'])
+    event['nh3']   = get_or_simulate('nh3', 0, is_nh3=True)
+    event['voc']   = get_or_simulate('voc', base['voc'])
+    event['smoke'] = get_or_simulate('smoke', base['smoke'])
         
     NH3_BP = [(0,200,0,50),(200,400,51,100),(400,800,101,200),(800,1200,201,300),(1200,1800,301,400),(1800,2000,401,500)]
 

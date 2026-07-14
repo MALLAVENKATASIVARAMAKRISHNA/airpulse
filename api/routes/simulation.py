@@ -81,6 +81,7 @@ NODE_BASES = {
     'NODE003': {'name': 'T Nagar',           'pm25': 68,  'pm10': 95,  'co': 4.2, 'no2': 52, 'ozone': 45, 'co2': 470, 'voc': 12, 'smoke': 8 },
     'NODE004': {'name': 'Mount Road',        'pm25': 105, 'pm10': 145, 'co': 8.0, 'no2': 78, 'ozone': 62, 'co2': 550, 'voc': 22, 'smoke': 16},
     'NODE005': {'name': 'Semmozhi Poonga',   'pm25': 28,  'pm10': 42,  'co': 1.2, 'no2': 18, 'ozone': 28, 'co2': 400, 'voc': 4,  'smoke': 2 },
+    'NODE006': {'name': 'Chennai Port Area', 'pm25': 55,  'pm10': 80,  'co': 2.5, 'no2': 35, 'ozone': 30, 'co2': 450, 'voc': 10, 'smoke': 6 },
 }
 
 PM25_BP  = [(0,30,0,50),(30,60,51,100),(60,90,101,200),(90,120,201,300),(120,250,301,400),(250,500,401,500)]

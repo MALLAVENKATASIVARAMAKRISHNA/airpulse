@@ -76,6 +76,7 @@ NODE_META = {
     'NODE003': {'lat': 13.0418, 'lon': 80.2341, 'zone': 'Commercial',  'zcode': 1, 'highway': True,  'factory': False, 'construction': True,  'pop': 90,  'green': 8.0},
     'NODE004': {'lat': 13.0569, 'lon': 80.2521, 'zone': 'Commercial',  'zcode': 1, 'highway': True,  'factory': False, 'construction': False, 'pop': 85,  'green': 10.0},
     'NODE005': {'lat': 13.0604, 'lon': 80.2496, 'zone': 'Residential', 'zcode': 0, 'highway': False, 'factory': False, 'construction': False, 'pop': 40,  'green': 45.0},
+    'NODE006': {'lat': 13.0900, 'lon': 80.2900, 'zone': 'Industrial',  'zcode': 2, 'highway': True,  'factory': False, 'construction': False, 'pop': 70,  'green': 15.0},
 }
 
 conn = get_conn()

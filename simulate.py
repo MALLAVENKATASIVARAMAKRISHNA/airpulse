@@ -26,6 +26,8 @@ NODES = [
      "base": {"pm25":105, "pm10":145, "co":8.0, "no2":78, "ozone":62, "co2":550, "voc":22, "smoke":16}},
     {"node_id": "NODE005", "name": "Semmozhi Poonga",        "base_aqi": 72,
      "base": {"pm25":28,  "pm10":42,  "co":1.2, "no2":18, "ozone":28, "co2":400, "voc":4,  "smoke":2}},
+    {"node_id": "NODE006", "name": "Chennai Port Area",      "base_aqi": 120,
+     "base": {"pm25":55,  "pm10":80,  "co":2.5, "no2":35, "ozone":30, "co2":450, "voc":10, "smoke":6}},
 ]
 
 # ── Sub-AQI calculators (CPCB breakpoints) ───────────────────
