@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, ScrollView, RefreshControl, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, RefreshControl, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, FlatList } from 'react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import { useNavigation } from '@react-navigation/native'
 import { useAir } from '../context/AirContext'
@@ -113,9 +113,10 @@ function DonutChart({ reading, size = 110, thickness = 18 }) {
 
 export default function HomeScreen() {
   const navigation = useNavigation()
-  const { reading, health, loading, refresh, user, predictions: mlPredictions, live } = useAir()
+  const { reading, allNodes, health, loading, refresh, user, predictions: mlPredictions, live, activeNodeId, setActiveNodeId } = useAir()
   const [refreshing, setRefreshing] = React.useState(false)
   const [healthRisk, setHealthRisk] = React.useState(null)
+  const [pickerVisible, setPickerVisible] = React.useState(false)
 
   const p6  = mlPredictions?.['6h']  ?? reading?.aqi ?? 0
   const p24 = mlPredictions?.['24h'] ?? reading?.aqi ?? 0
@@ -154,10 +155,10 @@ export default function HomeScreen() {
       <View style={s.header}>
         <View style={s.headerLeft}>
           <Text style={s.greeting}>Hi, {firstName} 👋</Text>
-          <View style={s.locationRow}>
-            <Text style={s.locationText} numberOfLines={1}>📍 {reading?.location || '—'}</Text>
+          <TouchableOpacity style={s.locationRow} onPress={() => setPickerVisible(true)}>
+            <Text style={s.locationText} numberOfLines={1}>📍 {reading?.location || '—'} ▾</Text>
             {live && <View style={s.liveDot} />}
-          </View>
+          </TouchableOpacity>
         </View>
         <View style={s.timeChip}>
           <Text style={s.timeText}>{formatTime(reading?.recorded_at)}</Text>
@@ -313,6 +314,46 @@ export default function HomeScreen() {
           <Text style={s.tipText}>{getTip(aqi, health)}</Text>
         </View>
       </View>
+
+      {/* Location Picker Modal */}
+      <Modal
+        visible={pickerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPickerVisible(false)}
+      >
+        <View style={s.modalBackdrop}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Select Location</Text>
+              <TouchableOpacity onPress={() => setPickerVisible(false)}>
+                <Text style={s.modalCloseText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={allNodes}
+              keyExtractor={(item) => item.node_id}
+              renderItem={({ item }) => {
+                const isSelected = item.node_id === activeNodeId
+                return (
+                  <TouchableOpacity
+                    style={[s.modalItem, isSelected && s.modalItemActive]}
+                    onPress={() => {
+                      setActiveNodeId(item.node_id)
+                      setPickerVisible(false)
+                    }}
+                  >
+                    <Text style={[s.modalItemText, isSelected && s.modalItemTextActive]}>
+                      📍 {item.location}
+                    </Text>
+                    <Text style={s.modalItemDistrict}>{item.district}, {item.state}</Text>
+                  </TouchableOpacity>
+                )
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -398,4 +439,68 @@ const s = StyleSheet.create({
   // Tip
   tipCard:              { borderRadius: 16, padding: 16, borderLeftWidth: 3 },
   tipText:              { fontSize: 14, color: 'rgba(255,255,255,0.70)', lineHeight: 21 },
+
+  // Location Selector Modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 320,
+    maxHeight: 400,
+    backgroundColor: C.surface,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: C.white,
+  },
+  modalCloseText: {
+    fontSize: 14,
+    color: C.teal,
+    fontWeight: '600',
+  },
+  modalItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  modalItemActive: {
+    backgroundColor: C.tealBg,
+    borderWidth: 1,
+    borderColor: C.teal + '30',
+  },
+  modalItemText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  modalItemTextActive: {
+    color: C.teal,
+  },
+  modalItemDistrict: {
+    fontSize: 11,
+    color: C.muted,
+    paddingLeft: 20,
+  },
 })
