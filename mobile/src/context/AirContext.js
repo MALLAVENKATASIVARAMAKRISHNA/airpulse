@@ -22,6 +22,13 @@ export function AirProvider({ user, children }) {
     activeNodeIdRef.current = activeNodeId
   }, [activeNodeId])
 
+  // Sync activeNodeId when the user's default node changes in profile settings
+  useEffect(() => {
+    if (user?.node_id) {
+      setActiveNodeId(user.node_id)
+    }
+  }, [user?.node_id])
+
   const load = useCallback(async () => {
     try {
       const tasks = [

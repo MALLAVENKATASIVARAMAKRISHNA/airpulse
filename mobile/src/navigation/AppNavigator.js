@@ -147,14 +147,14 @@ function Tabs() {
   )
 }
 
-export default function AppNavigator({ onLogout }) {
+export default function AppNavigator({ onUpdateUser, onLogout }) {
   return (
     <Stack.Navigator>
       <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
-        initialParams={{ onLogout }}
+        initialParams={{ onUpdateUser, onLogout }}
         options={{ title: 'Profile', ...HEADER_OPTS, headerTintColor: ACTIVE }}
       />
       <Stack.Screen

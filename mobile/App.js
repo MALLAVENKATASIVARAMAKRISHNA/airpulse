@@ -84,11 +84,11 @@ function AlertWatcher() {
   )
 }
 
-function MainApp({ user, onLogout }) {
+function MainApp({ user, onUpdateUser, onLogout }) {
   return (
     <AirProvider user={user}>
       <AlertWatcher />
-      <AppNavigator onLogout={onLogout} />
+      <AppNavigator onUpdateUser={onUpdateUser} onLogout={onLogout} />
     </AirProvider>
   )
 }
@@ -147,6 +147,11 @@ export default function App() {
     registerPushToken()
   }
 
+  function handleUpdateUser(updatedUser) {
+    setUser(updatedUser)
+    Storage.setUser(updatedUser)
+  }
+
   function handleLogout() {
     setUser(null)
     setNeedsHealth(false)
@@ -166,7 +171,7 @@ export default function App() {
           ? <AuthScreen onLogin={handleLogin} onSignup={handleSignup} />
           : needsHealthSetup
             ? <HealthSetupScreen onComplete={() => setNeedsHealth(false)} />
-            : <MainApp user={user} onLogout={handleLogout} />
+            : <MainApp user={user} onUpdateUser={handleUpdateUser} onLogout={handleLogout} />
         }
       </NavigationContainer>
       <FullScreenAlert

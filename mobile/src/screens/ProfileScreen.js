@@ -17,7 +17,7 @@ const SEVERITIES = [
 ]
 
 export default function ProfileScreen({ route, navigation }) {
-  const { onLogout } = route.params
+  const { onUpdateUser, onLogout } = route.params
   const { user: ctxUser, health: ctxHealth } = useAir()
 
   const [user, setUser]             = useState(ctxUser)
@@ -109,6 +109,9 @@ export default function ProfileScreen({ route, navigation }) {
         node_id:   profileForm.node_id || null,
       })
       setUser(u => ({ ...u, ...updated }))
+      if (onUpdateUser) {
+        onUpdateUser(updated)
+      }
       setProfileMsg('Profile updated successfully.')
     } catch (e) {
       Alert.alert('Error', e.message)
