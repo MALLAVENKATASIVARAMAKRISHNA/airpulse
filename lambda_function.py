@@ -486,7 +486,7 @@ def lambda_handler(event, context):
         'sub_aqi_pm25':       subs['PM2.5'],
         'sub_aqi_pm10':       subs['PM10'],
         'sub_aqi_co':         subs['CO'],
-        'sub_aqi_nh3':        0,
+        'sub_aqi_nh3':        subs['NH3'],
         'sub_aqi_no2':        subs['NO2'],
         'sub_aqi_ozone':      subs['Ozone'],
         'dominant_pollutant': dominant,
