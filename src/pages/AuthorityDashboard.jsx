@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import AppShell from '../components/AppShell'
 import DangerAlert from '../components/DangerAlert'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie } from 'recharts'
+import HelpPage from './HelpPage'
 
 function aqiMeta(aqi) {
   if (aqi <= 50)  return { label: 'Good',        color: '#00E400' }
@@ -568,6 +569,10 @@ export default function AuthorityDashboard({ profile, onSignOut, theme, toggleTh
                     </div>
                   ))}
                 </div>
+              )}
+
+              {tab === 'help' && (
+                <HelpPage role="authority" />
               )}
             </>
           )}

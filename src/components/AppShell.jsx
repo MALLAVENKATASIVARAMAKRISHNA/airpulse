@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Activity, Bell, BarChart2, Brain, Globe, Heart, LogOut, MapPin, Play, ShieldCheck, Settings, TrendingUp, Users, Wind, Zap, Sun, Moon, Menu, X } from 'lucide-react'
+import { Activity, Bell, BarChart2, Brain, Globe, Heart, LogOut, MapPin, Play, ShieldCheck, Settings, TrendingUp, Users, Wind, Zap, Sun, Moon, Menu, X, HelpCircle } from 'lucide-react'
 import Logo from './Logo'
 
 const USER_NAV = [
@@ -12,6 +12,7 @@ const USER_NAV = [
   { id: 'sources',         icon: Brain,       label: 'Sources'       },
   { id: 'alerts',          icon: Bell,        label: 'Alerts'        },
   { id: 'settings',        icon: Settings,    label: 'Settings'      },
+  { id: 'help',            icon: HelpCircle,  label: 'Help & About'  },
 ]
 
 const ADMIN_NAV = [
@@ -26,6 +27,7 @@ const AUTHORITY_NAV = [
   { id: 'overview',  icon: Globe,     label: 'City Overview' },
   { id: 'nodes',     icon: MapPin,    label: 'All Nodes'     },
   { id: 'anomalies', icon: Zap,       label: 'Anomalies'     },
+  { id: 'help',      icon: HelpCircle,  label: 'Help & About'  },
 ]
 
 export default function AppShell({ role, onSignOut, activeTab, onTabChange, theme, toggleTheme, children }) {

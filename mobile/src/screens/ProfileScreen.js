@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert, Modal,
 } from 'react-native'
 import { api } from '../lib/api'
 import { Storage } from '../lib/storage'
@@ -28,6 +28,7 @@ export default function ProfileScreen({ route, navigation }) {
   const [sevModal, setSevModal]     = useState(false)
   const [nodeModal, setNodeModal]   = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
+  const [helpVisible, setHelpVisible] = useState(false)
 
   const [form, setForm] = useState({
     conditionId:   ctxHealth?.condition_id   ?? 1,
@@ -332,6 +333,11 @@ export default function ProfileScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
+      {/* Help & About Button */}
+      <TouchableOpacity style={styles.helpBtn} onPress={() => setHelpVisible(true)}>
+        <Text style={styles.helpBtnText}>❓ Help & Information</Text>
+      </TouchableOpacity>
+
       {/* Logout */}
       <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
         <Text style={styles.logoutText}>Sign out</Text>
@@ -358,6 +364,76 @@ export default function ProfileScreen({ route, navigation }) {
         onSelect={item => update('severity', item.value)}
         onClose={() => setSevModal(false)}
       />
+
+      {/* Help Modal */}
+      <Modal
+        visible={helpVisible}
+        animationType="slide"
+        onRequestClose={() => setHelpVisible(false)}
+      >
+        <ScrollView style={styles.helpModalContainer} contentContainerStyle={styles.helpModalContent}>
+          <View style={styles.helpModalHeader}>
+            <Text style={styles.helpModalTitle}>Help & Information</Text>
+            <TouchableOpacity onPress={() => setHelpVisible(false)}>
+              <Text style={styles.helpModalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Section 1: AQI */}
+          <View style={styles.helpSection}>
+            <Text style={styles.helpSectionTitle}>AQI Ranges</Text>
+            {[
+              { range: '0 - 50',   label: 'Good (Green)', desc: 'Satisfactory. Outdoor activities are safe.' },
+              { range: '51 - 100',  label: 'Satisfactory (Light Green)', desc: 'Satisfactory. Highly sensitive people might experience minor discomfort.' },
+              { range: '101 - 200', label: 'Moderate (Yellow)', desc: 'Sensitive groups (Asthma/COPD) may feel minor irritation.' },
+              { range: '201 - 300', label: 'Poor (Orange)', desc: 'General public might experience discomfort. Limit outdoor activity.' },
+              { range: '301 - 400', label: 'Very Poor (Red)', desc: 'Respiratory issues on exposure. Limit travel, wear N95 mask.' },
+              { range: '401 - 500', label: 'Severe (Purple)', desc: 'Healthy people experience respiratory issues. Stay indoors.' }
+            ].map(item => (
+              <View key={item.label} style={styles.helpItem}>
+                <Text style={styles.helpItemLabel}>{item.label} : {item.range}</Text>
+                <Text style={styles.helpItemDesc}>{item.desc}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Section 2: Pollutants */}
+          <View style={styles.helpSection}>
+            <Text style={styles.helpSectionTitle}>Major Pollutants</Text>
+            {[
+              { name: 'PM2.5', limit: 'Limit: 60 µg/m³', desc: 'Fine dust particles. Can enter deep into lungs and blood. Main source: traffic smoke.' },
+              { name: 'PM10',  limit: 'Limit: 100 µg/m³', desc: 'Coarse dust particles. Causes nose/throat irritation. Source: road and building dust.' },
+              { name: 'CO',    limit: 'Limit: 4 mg/m³', desc: 'Carbon Monoxide. Reduces oxygen delivery in blood. Source: traffic engines.' },
+              { name: 'Ozone', limit: 'Limit: 100 µg/m³', desc: 'Ground-level Ozone. Reacts in heat and sunlight. Causes chest irritation.' },
+              { name: 'NH3',   limit: 'Limit: 400 µg/m³', desc: 'Ammonia. Causes throat burn. Source: fertilizer runoff and industrial leaks.' }
+            ].map(item => (
+              <View key={item.name} style={styles.helpItem}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={styles.helpItemLabel}>{item.name}</Text>
+                  <Text style={styles.helpItemLimit}>{item.limit}</Text>
+                </View>
+                <Text style={styles.helpItemDesc}>{item.desc}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Section 3: Health Thresholds */}
+          <View style={styles.helpSection}>
+            <Text style={styles.helpSectionTitle}>Personalized Warning Alerts</Text>
+            <Text style={styles.helpItemDesc}>
+              The app automatically calculates your safe breathing threshold based on the health conditions, severity, and age you enter in your profile. For instance, if you suffer from severe Asthma, the app triggers poor air quality alert banners early at AQI 100 instead of the standard AQI 200, allowing you to take preventative measures.
+            </Text>
+          </View>
+
+          {/* Section 4: AI Anomaly */}
+          <View style={styles.helpSection}>
+            <Text style={styles.helpSectionTitle}>AI Anomaly & Forecasts</Text>
+            <Text style={styles.helpItemDesc}>
+              AirPulse runs Gradient Boosting models in the cloud to forecast AQI trends up to 48 hours. It also deploys an Isolation Forest anomaly classifier. If a node outputs suspicious data due to dust/malfunction, the AI automatically detects it as an anomaly so you are not misinformed by false readings.
+            </Text>
+          </View>
+        </ScrollView>
+      </Modal>
     </ScrollView>
   )
 }
@@ -387,6 +463,21 @@ const styles = StyleSheet.create({
   select:           { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, backgroundColor: '#1e1e1e', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   selectText:       { fontSize: 15, color: '#ffffff' },
   arrow:            { fontSize: 16, color: 'rgba(255,255,255,0.35)' },
+  tipCard:          { borderRadius: 16, padding: 16, borderLeftWidth: 3 },
+  tipText:          { fontSize: 14, color: 'rgba(255,255,255,0.70)', lineHeight: 21 },
+  helpBtn:          { backgroundColor: '#161616', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, alignItems: 'center', marginHorizontal: 16, marginTop: 10, marginBottom: 10 },
+  helpBtnText:      { fontSize: 15, fontWeight: '700', color: '#3DD9AC' },
+  helpModalContainer: { flex: 1, backgroundColor: '#0a0a0a' },
+  helpModalContent: { padding: 24, paddingBottom: 60 },
+  helpModalHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', paddingBottom: 12 },
+  helpModalTitle:   { fontSize: 20, fontWeight: '900', color: '#ffffff' },
+  helpModalCloseText: { fontSize: 15, fontWeight: '700', color: '#3DD9AC' },
+  helpSection:      { marginBottom: 24, backgroundColor: '#161616', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)' },
+  helpSectionTitle: { fontSize: 15, fontWeight: '900', color: '#3DD9AC', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 },
+  helpItem:         { marginBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)', paddingBottom: 10 },
+  helpItemLabel:    { fontSize: 13, fontWeight: '700', color: '#ffffff', marginBottom: 4 },
+  helpItemLimit:    { fontSize: 11, fontWeight: '700', color: '#3DD9AC' },
+  helpItemDesc:     { fontSize: 12, color: 'rgba(255,255,255,0.40)', lineHeight: 18 },
   input:            { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: '#ffffff', backgroundColor: '#1e1e1e' },
   genderRow:        { flexDirection: 'row', gap: 8, marginTop: 0 },
   genderBtn:        { flex: 1, paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', backgroundColor: '#1e1e1e' },

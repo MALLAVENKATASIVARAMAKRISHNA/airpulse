@@ -10,6 +10,7 @@ import RecommendationsPage from './RecommendationsPage'
 import SourceAnalysisPage from './SourceAnalysisPage'
 import AlertCenterPage from './AlertCenterPage'
 import SettingsPage from './SettingsPage'
+import HelpPage from './HelpPage'
 import DangerAlert from '../components/DangerAlert'
 import { api } from '../lib/api'
 
@@ -312,6 +313,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
     if (tab === 'alerts')          return <AlertCenterPage profile={profile} />
     if (tab === 'settings')        return <SettingsPage profile={profile} health={health} onReloadUser={onReloadUser} />
     if (tab === 'air')             return <PollutantsView reading={reading} loading={loading} onRefresh={loadHistory} />
+    if (tab === 'help')            return <HelpPage role="user" />
 
     // Overview
     return (
