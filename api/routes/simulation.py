@@ -185,12 +185,14 @@ def generate_and_insert(node_id, base):
         nh3   = round(random.uniform(1.0, 5.0) * tf, 2)
 
 
+    NH3_BP = [(0,200,0,50),(200,400,51,100),(400,800,101,200),(800,1200,201,300),(1200,1800,301,400),(1800,2000,401,500)]
     subs = {
         'PM2.5': sub_aqi(pm25,  PM25_BP),
         'PM10':  sub_aqi(pm10,  PM10_BP),
         'CO':    sub_aqi(co,    CO_BP),
         'NO2':   sub_aqi(no2,   NO2_BP),
         'Ozone': sub_aqi(ozone, OZONE_BP),
+        'NH3':   sub_aqi(nh3,   NH3_BP),
     }
     dominant = max(subs, key=subs.get)
     aqi = override.get('aqi', max(subs.values()))
@@ -210,7 +212,7 @@ def generate_and_insert(node_id, base):
         'sub_aqi_pm25':      subs['PM2.5'],
         'sub_aqi_pm10':      subs['PM10'],
         'sub_aqi_co':        subs['CO'],
-        'sub_aqi_nh3':       0,
+        'sub_aqi_nh3':       subs['NH3'],
         'sub_aqi_no2':       subs['NO2'],
         'sub_aqi_ozone':     subs['Ozone'],
         'dominant_pollutant': dominant,
@@ -232,7 +234,7 @@ def generate_and_insert(node_id, base):
         ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
     """, (
         node_id, aqi, pm25, pm10, co, nh3, no2, ozone, co2, voc, smoke,
-        subs['PM2.5'], subs['PM10'], subs['CO'], 0,
+        subs['PM2.5'], subs['PM10'], subs['CO'], subs['NH3'],
         subs['NO2'], subs['Ozone'], dominant, predicted_cause, is_anomaly
     ), fetch='none')
 
