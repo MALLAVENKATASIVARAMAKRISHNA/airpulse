@@ -28,7 +28,12 @@ def get_user_count(current_user=Depends(get_current_user)):
         dist_count = 0
         if district:
             res_dist = query(
-                "SELECT COUNT(*) as count FROM users WHERE role = 'user' AND LOWER(district) = LOWER(%s)",
+                """
+                SELECT COUNT(*) as count 
+                FROM users u
+                JOIN nodes n ON n.node_id = u.node_id
+                WHERE u.role = 'user' AND LOWER(n.district) = LOWER(%s)
+                """,
                 (district,), fetch='one'
             )
             dist_count = res_dist['count'] if res_dist else 0
