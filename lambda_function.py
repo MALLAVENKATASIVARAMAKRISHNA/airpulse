@@ -7,7 +7,8 @@ _scaler = None
 _conn   = None
 
 S3     = boto3.client('s3', region_name='ap-south-1')
-IOT    = boto3.client('iot-data', region_name='ap-south-1')
+IOT_ENDPOINT = os.environ.get('AWS_IOT_ENDPOINT', 'a154ie33qhakmk-ats.iot.ap-south-1.amazonaws.com')
+IOT    = boto3.client('iot-data', region_name='ap-south-1', endpoint_url=f'https://{IOT_ENDPOINT}')
 BUCKET = os.environ['S3_BUCKET']
 
 NODE_ENC = {'NODE001':0,'NODE002':1,'NODE003':2,'NODE004':3,'NODE005':4,'NODE006':5}
@@ -410,9 +411,8 @@ def lambda_handler(event, context):
     ]])
     is_anomaly = bool(_models['anomaly'].predict(_scaler.transform(anom_feat))[0] == -1)
 
-    # Cause classification (Random Forest Classifier)
     try:
-        if False: # Force fallback to rule-based logic to use updated, unbiased formulas
+        if True: # Run the trained Random Forest classifier
             meta = NODE_META.get(node_id, {'lat':13.0850,'lon':80.2101,'zone':0,'highway':0,'factory':0,'construction':0,'pop':80, 'green':22.0})
             cause_feat = pd.DataFrame([[
                 wthr['temp'], wthr['hum'], wthr['pres'], wthr['wind'], wthr['rain'], wthr['vis'],
