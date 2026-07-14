@@ -113,6 +113,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
 
   const [alertVisible, setAlertVisible] = useState(false)
   const lastAlertedTime = useRef(null)
+  const lastLivePacketTime = useRef(0)
 
   useEffect(() => {
     if (!reading) return
@@ -152,7 +153,9 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
       const mine = (nodes||[]).find(n => n.node_id === profile.node_id)
       if (mine) {
         locationRef.current = { location: mine.location, district: mine.district }
-        setReading(mine)
+        if (profile.node_id !== 'NODE006' || Date.now() - lastLivePacketTime.current > 15000) {
+          setReading(mine)
+        }
       }
       setReadings((hist||[]).slice(0,24).reverse())
       
@@ -199,6 +202,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
           if (topic.startsWith('airpulse/ml/')) {
             setMlData(data)
           } else {
+            lastLivePacketTime.current = Date.now()
             let processedData = { ...data }
             if (processedData.node_id === 'NODE006') {
               const h = new Date().getHours()
