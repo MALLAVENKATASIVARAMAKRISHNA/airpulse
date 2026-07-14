@@ -186,7 +186,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
   useEffect(() => {
     let client
     api.getIotUrl().then(({ url }) => {
-      client = mqtt.connect(url, { clientId: `web-${profile.user_id}-${Date.now()}` })
+      client = mqtt.connect(url, { clientId: `web-${Date.now()}` })
       clientRef.current = client
 
       client.on('connect', () => {
