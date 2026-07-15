@@ -81,9 +81,9 @@ export function AirProvider({ user, children }) {
       })
 
       client.on('connect', () => {
-        client.subscribe('airpulse/clean_readings/#')
-        client.subscribe('airpulse/readings/#')
-        client.subscribe('airpulse/ml/#')
+        client.subscribe(`airpulse/clean_readings/${activeNodeId}`)
+        client.subscribe(`airpulse/readings/${activeNodeId}`)
+        client.subscribe(`airpulse/ml/${activeNodeId}`)
         setLive(true)
         setLoading(false)
       })
@@ -91,18 +91,25 @@ export function AirProvider({ user, children }) {
       client.on('message', (topic, message) => {
         try {
           const data = JSON.parse(message.toString())
+          let processedData = { ...data }
+          
+          // Extract node_id from the topic suffix if it's missing in the raw hardware payload
+          if (!processedData.node_id) {
+            const parts = topic.split('/')
+            processedData.node_id = parts[parts.length - 1]
+          }
+
           if (topic.startsWith('airpulse/ml/')) {
-            if (data.node_id === activeNodeIdRef.current) {
-              setPredictions(data.predictions || {})
-              setIsAnomaly(data.is_anomaly || false)
+            if (processedData.node_id === activeNodeIdRef.current) {
+              setPredictions(processedData.predictions || {})
+              setIsAnomaly(processedData.is_anomaly || false)
             }
           } else if (topic.startsWith('airpulse/clean_readings/')) {
-            setAllNodes(prev => prev.map(n => n.node_id === data.node_id ? { ...n, ...data } : n))
-            if (data.node_id === activeNodeIdRef.current) {
-              setReading(prev => ({ ...prev, ...data }))
+            setAllNodes(prev => prev.map(n => n.node_id === processedData.node_id ? { ...n, ...processedData } : n))
+            if (processedData.node_id === activeNodeIdRef.current) {
+              setReading(prev => ({ ...prev, ...processedData }))
             }
           } else if (topic.startsWith('airpulse/readings/')) {
-            let processedData = { ...data }
             if (processedData.node_id === 'NODE006') {
               const h = new Date().getHours()
               let tf = 0.90 + 0.15 * Math.sin((h - 12) * Math.PI / 6)
@@ -186,7 +193,7 @@ export function AirProvider({ user, children }) {
     }).catch(() => {})
 
     return () => { client?.end(true); setLive(false) }
-  }, [user.user_id])
+  }, [activeNodeId, user.user_id])
 
   return (
     <AirContext.Provider value={{
