@@ -105,6 +105,8 @@ function CustomPredictDot(props) {
 
 export default function UserDashboard({ profile, health, onSignOut, onReloadUser, theme, toggleTheme }) {
   const [tab,      setTab]      = useState('overview')
+  const [activeNodeId, setActiveNodeId] = useState(profile.node_id)
+  const [allNodes, setAllNodes] = useState([])
   const [reading,  setReading]  = useState(null)
   const [readings, setReadings] = useState([])
   const [loading,  setLoading]  = useState(true)
@@ -148,13 +150,14 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
     try {
       const [nodes, hist, preds] = await Promise.all([
         api.latestAll(),
-        api.nodeReadings(profile.node_id),
-        api.predictions(profile.node_id)
+        api.nodeReadings(activeNodeId),
+        api.predictions(activeNodeId)
       ])
-      const mine = (nodes||[]).find(n => n.node_id === profile.node_id)
+      const mine = (nodes||[]).find(n => n.node_id === activeNodeId)
+      setAllNodes(nodes || [])
       if (mine) {
         locationRef.current = { location: mine.location, district: mine.district }
-        if (profile.node_id !== 'NODE006' || Date.now() - lastLivePacketTime.current > 15000) {
+        if (activeNodeId !== 'NODE006' || Date.now() - lastLivePacketTime.current > 15000) {
           setReading(mine)
         }
       }
@@ -171,7 +174,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
       }
     } catch {}
     setLoading(false)
-  }, [profile.node_id, live])
+  }, [activeNodeId, live])
 
   // Initial load + history refresh (2s fallback if WebSocket is not live, 5m otherwise)
   useEffect(() => {
@@ -191,9 +194,9 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
       clientRef.current = client
 
       client.on('connect', () => {
-        client.subscribe(`airpulse/clean_readings/${profile.node_id}`)
-        client.subscribe(`airpulse/readings/${profile.node_id}`)
-        client.subscribe(`airpulse/ml/${profile.node_id}`)
+        client.subscribe(`airpulse/clean_readings/${activeNodeId}`)
+        client.subscribe(`airpulse/readings/${activeNodeId}`)
+        client.subscribe(`airpulse/ml/${activeNodeId}`)
         setLive(true)
       })
 
@@ -295,7 +298,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
     }).catch(() => {})
 
     return () => { client?.end(true); setLive(false) }
-  }, [profile.node_id, profile.user_id])
+  }, [activeNodeId, profile.user_id])
 
 
   const aqi      = reading?.aqi || 0
@@ -304,13 +307,18 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
   const isDanger = aqi >= warnAt
   const chartData = readings.map(r => ({ time: formatTime(r.recorded_at), aqi: r.aqi||0 }))
 
+  const activeProfile = {
+    ...profile,
+    node_id: activeNodeId
+  }
+
   const renderContent = () => {
-    if (tab === 'forecast')        return <ForecastPage profile={profile} currentAqi={aqi} mlData={mlData} health={health} />
-    if (tab === 'hotspot')         return <HotspotPage profile={profile} />
-    if (tab === 'health')          return <HealthAssessmentPage profile={profile} health={health} />
-    if (tab === 'recommendations') return <RecommendationsPage profile={profile} health={health} />
-    if (tab === 'sources')         return <SourceAnalysisPage profile={profile} />
-    if (tab === 'alerts')          return <AlertCenterPage profile={profile} />
+    if (tab === 'forecast')        return <ForecastPage profile={activeProfile} currentAqi={aqi} mlData={mlData} health={health} />
+    if (tab === 'hotspot')         return <HotspotPage profile={activeProfile} />
+    if (tab === 'health')          return <HealthAssessmentPage profile={activeProfile} health={health} />
+    if (tab === 'recommendations') return <RecommendationsPage profile={activeProfile} health={health} />
+    if (tab === 'sources')         return <SourceAnalysisPage profile={activeProfile} />
+    if (tab === 'alerts')          return <AlertCenterPage profile={activeProfile} />
     if (tab === 'settings')        return <SettingsPage profile={profile} health={health} onReloadUser={onReloadUser} />
     if (tab === 'air')             return <PollutantsView reading={reading} loading={loading} onRefresh={loadHistory} />
     if (tab === 'help')            return <HelpPage role="user" />
@@ -337,10 +345,29 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
           </div>
         </div>
 
-        {/* Location bar */}
-        <div className="flex items-center gap-2 text-sm text-white/40">
-          <MapPin size={14} className="text-brandCyan"/>
-          <span>{reading?.location || '—'}, {reading?.district || 'Chennai'}</span>
+        {/* Location switcher bar */}
+        <div className="flex items-center gap-4 text-sm text-white/40 glass-card p-3 rounded-btn">
+          <div className="flex items-center gap-2">
+            <MapPin size={14} className="text-brandCyan"/>
+            <span className="font-semibold text-white/60">Monitoring Station:</span>
+            <select
+              value={activeNodeId}
+              onChange={(e) => setActiveNodeId(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-brandCyan transition-colors cursor-pointer"
+            >
+              {allNodes.length > 0 ? (
+                allNodes.map(n => (
+                  <option key={n.node_id} value={n.node_id} className="bg-[#0b0f19] text-white">
+                    {n.location} ({n.district})
+                  </option>
+                ))
+              ) : (
+                <option value={activeNodeId} className="bg-[#0b0f19] text-white">
+                  {reading?.location || 'Loading...'}
+                </option>
+              )}
+            </select>
+          </div>
           <span className="ml-auto text-xs text-white/30">Updated {formatTime(reading?.recorded_at)}</span>
         </div>
 
