@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react'
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Vibration } from 'react-native'
 import { getAqiMeta } from '../lib/airQuality'
 
-export default function FullScreenAlert({ visible, aqi, location, onDismiss }) {
+export default function FullScreenAlert({ visible, aqi, location, dominantPollutant, onDismiss }) {
   const pulse = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
@@ -50,9 +50,15 @@ export default function FullScreenAlert({ visible, aqi, location, onDismiss }) {
           <Text style={styles.aqiLabel}>AQI</Text>
         </Animated.View>
 
-        <View style={styles.categoryBadge}>
+        <View style={[styles.categoryBadge, dominantPollutant ? { marginBottom: 12 } : {}]}>
           <Text style={[styles.categoryText, { color: meta.color }]}>{meta.label}</Text>
         </View>
+
+        {dominantPollutant ? (
+          <View style={styles.pollutantBadge}>
+            <Text style={styles.pollutantText}>⚠️ Primary Pollutant: {dominantPollutant}</Text>
+          </View>
+        ) : null}
 
         <Text style={styles.message}>
           Air quality has crossed your personal health threshold.{'\n'}
@@ -80,6 +86,8 @@ const styles = StyleSheet.create({
   aqiLabel:     { fontSize: 18, color: 'rgba(255,255,255,0.8)', textAlign: 'center', fontWeight: '700', marginBottom: 16 },
   categoryBadge:{ backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 24, marginBottom: 24 },
   categoryText: { fontSize: 16, fontWeight: '800' },
+  pollutantBadge:{ backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  pollutantText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   message:      { fontSize: 15, color: 'rgba(255,255,255,0.95)', textAlign: 'center', lineHeight: 24, marginBottom: 40 },
   dismissBtn:   { backgroundColor: '#fff', paddingHorizontal: 48, paddingVertical: 18, borderRadius: 18, elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   dismissText:  { fontSize: 18, fontWeight: '800' },

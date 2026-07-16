@@ -79,6 +79,7 @@ function AlertWatcher() {
       visible={alertVisible}
       aqi={reading?.aqi}
       location={reading?.location}
+      dominantPollutant={reading?.dominant_pollutant}
       onDismiss={() => setAlertVisible(false)}
     />
   )
