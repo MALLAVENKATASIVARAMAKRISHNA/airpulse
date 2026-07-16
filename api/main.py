@@ -119,6 +119,13 @@ def startup_load_models():
     if 'anomaly' not in ml_inference._models:
         print('Startup: models incompatible — launching background retrain from RDS...')
         threading.Thread(target=_retrain_in_background, daemon=True).start()
+    
+    # Start the AWS IoT MQTT Subscriber Background Worker
+    try:
+        from iot_worker import start_iot_worker
+        start_iot_worker()
+    except Exception as e:
+        print(f"Startup: failed to launch IoT background worker: {e}")
 
 @app.get('/api/health')
 def health():
