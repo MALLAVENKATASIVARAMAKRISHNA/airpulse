@@ -122,7 +122,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
     if (!reading) return
     const aqi = reading.aqi ?? 0
     const recordedAt = reading.recorded_at
-    const threshold = 200
+    const threshold = warnAt
 
     if (aqi < threshold) {
       // Dropped below threshold: reset the trigger time so next rise alerts instantly
@@ -144,7 +144,7 @@ export default function UserDashboard({ profile, health, onSignOut, onReloadUser
         }
       }
     }
-  }, [reading])
+  }, [reading, warnAt])
 
   const loadHistory = useCallback(async () => {
     try {
