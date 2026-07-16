@@ -57,6 +57,43 @@ def _get_alert_threshold(condition_name: str, severity: str, age: int) -> int:
     return max(75, alert + mod)
 
 
+def _get_warn_threshold(condition_name: str, severity: str, age: int) -> int:
+    cond = (condition_name or '').lower()
+    yr   = int(age or 30)
+
+    infant  = yr <= 2
+    child   = 3  <= yr <= 12
+    elderly = yr >= 60
+
+    # Asthma
+    if 'asthma' in cond:
+        warn = 100 if (infant or child) else 101 if elderly else 151
+    # COPD
+    elif 'copd' in cond:
+        warn = 101 if elderly else 151
+    # Heart / Cardiovascular
+    elif 'heart' in cond:
+        warn = 101 if elderly else 151
+    # Diabetes
+    elif 'diabetes' in cond:
+        warn = 101 if elderly else 151
+    # Children
+    elif 'children' in cond:
+        warn = 100
+    # Elderly
+    elif 'elderly' in cond:
+        warn = 101
+    # Normal / healthy
+    else:
+        if infant or child:  warn = 100
+        elif elderly:        warn = 101
+        else:                warn = 201
+
+    mod = -25 if severity == 'High' else 25 if severity == 'Low' else 0
+    return max(50, warn + mod)
+
+
+
 def _send(token: str, title: str, body: str, data: dict):
     try:
         httpx.post(EXPO_PUSH_URL, json={
@@ -101,7 +138,7 @@ def check_and_notify(node_id: str, aqi: int, location: str):
             """, (node_id,))
 
             for u in (users or []):
-                threshold = _get_alert_threshold(
+                threshold = _get_warn_threshold(
                     u['condition_name'],
                     u['severity_level'],
                     u['age'] or 30,
